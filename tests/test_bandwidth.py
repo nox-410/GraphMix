@@ -1,8 +1,5 @@
-import time, os, sys
-import yaml
-import multiprocessing
+import time, os
 import argparse
-import signal
 import numpy as np
 
 from concurrent.futures import ThreadPoolExecutor
@@ -13,10 +10,10 @@ nitem = 2000
 item_len = 1000
 max_thread = 10
 
-def test():
+def test(args):
     ps = DistGNN._PS
-    rank = int(os.environ["WORKER_ID"])
-    nrank = int(os.environ["DMLC_NUM_WORKER"])
+    rank = DistGNN._PS.rank()
+    nrank = DistGNN._PS.nrank()
     if rank > 0:
         return
     arr = np.random.rand(nitem, item_len).astype(np.float32)
@@ -51,42 +48,8 @@ def test():
             if task_list[i] is None or task_list[i].done():
                 task_list[i] = t.submit(pull_data)
 
-
-def start_process(settings, args):
-    for key, value in settings.items():
-        os.environ[key] = str(value)
-    if os.environ['DMLC_ROLE'] == "server":
-        DistGNN._PS.init()
-        DistGNN._PS.start_server()
-        DistGNN._PS.finalize()
-    elif os.environ['DMLC_ROLE'] == "worker":
-        DistGNN._PS.init()
-        test()
-        DistGNN._PS.finalize()
-    elif os.environ['DMLC_ROLE'] == "scheduler":
-        DistGNN._PS.init()
-        DistGNN._PS.finalize()
-    else:
-        raise ValueError("Unknown role", os.environ['DMLC_ROLE'])
-
-def signal_handler(signal, frame):
-    print("SIGINT signal caught, stop Training")
-    for proc in process_list:
-        proc.kill()
-    exit(0)
-
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     args = parser.parse_args()
-    file_path = args.config
-    settings = yaml.load(open(file_path).read(), Loader=yaml.FullLoader)
-    process_list = []
-    for key, value in settings.items():
-        if key != 'shared':
-            proc = multiprocessing.Process(target=start_process, args=[value, args])
-            process_list.append(proc)
-            proc.start()
-    signal.signal(signal.SIGINT, signal_handler)
-    for proc in process_list:
-        proc.join()
+    DistGNN.launcher(args, test)

@@ -6,13 +6,12 @@ namespace ps {
 
 template<> struct PSFData<DensePull> {
   using Request = tuple<
-    Key, // key
-    size_t // len
+    Key // key
   >;
   using Response = tuple<
-    SArray<float> // data
+    SArray<char> // data
   >;
-  static void _callback(const Response &response, SArray<float> tgt) {
+  static void _callback(const Response &response, SArray<char> tgt) {
     auto val = get<0>(response);
     CHECK_EQ(val.size(), tgt.size()) << val.size() << " " << tgt.size();
     std::copy(val.begin(), val.end(), tgt.begin());
@@ -22,8 +21,7 @@ template<> struct PSFData<DensePull> {
 template<> struct PSFData<DensePush> {
   using Request = tuple<
     Key, // key
-    size_t, // len
-    SArray<float> // data
+    SArray<char> // data
   >;
   using Response = tuple<>;
   static void _callback(const Response &response) {}

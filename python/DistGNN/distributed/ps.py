@@ -7,7 +7,6 @@ import libc_PS as _PS
 class PS:
     rank = None
     nrank = None
-    offset = 0
     feature_len = None
     communicator = None
 
@@ -23,11 +22,11 @@ def ps_node_id(node, node_from):
 
 def ps_node_feat_id(node, node_from):
     node_id = ps_node_id(node, node_from)
-    return PS.offset + 2 * node_id
+    return 2 * node_id
 
 def ps_node_edge_id(node, node_from):
     node_id = ps_node_id(node, node_from)
-    return PS.offset + 2 * node_id + 1
+    return 2 * node_id + 1
 
 #-------------------------------------------------------------------------------
 def ps_upload(x, y, indptr, indices, nodes_from):

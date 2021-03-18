@@ -22,16 +22,16 @@ def test(args):
     print(push_indices)
     push_length = np.repeat(item_len, repeats=nitem)
     worker_communicate = ps.get_handle()
-    query = worker_communicate.push_data(push_indices, arr, push_length)
+    query = worker_communicate.push_data_float(push_indices, arr, push_length)
     worker_communicate.wait(query)
     print("data_pushed")
     t = ThreadPoolExecutor(max_workers=max_thread)
     byte_count = 0
     arr2 = np.random.rand(nitem, item_len).astype(np.float32)
     def pull_data():
-        query = worker_communicate.pull_data(push_indices, arr2, push_length)
+        query = worker_communicate.pull_data_float(push_indices, arr2, push_length)
         worker_communicate.wait(query)
-        # print( np.all(arr.asnumpy() == arr2.asnumpy()) )
+        # print( np.all(arr == arr2) )
         nonlocal byte_count
         byte_count += nitem * item_len * 4
     def watch():

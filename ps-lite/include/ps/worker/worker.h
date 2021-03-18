@@ -1,35 +1,28 @@
 #pragma once
 
-#include "ps/ps.h"
 #include "ps/worker/kvworker.h"
+#include "common/binding.h"
 
 using namespace ps;
 
 class Worker {
 public:
-  Worker();
-  KVWorker _kvworker;
-
+  static Worker& Get();
   // for data push&pull
   typedef uint64_t query_t;
-  /*
-    for each indice, call PSAgent::PushData to launch a thread
-    hold the return handle in the global map
-    immediately return
-    user should guaruntee value unchanged until waitdata
-    returns:
-      an query_t which is a long
-      use waitdata(query_t) to wait for its success
-  */
-  query_t pushData(const long *indices, int index_size, float *data, const long *lengths);
-  // this is almost the same as push_data
-  query_t pullData(const long *indices, int index_size, float *data, const long *lengths);
+
+  query_t pushData(py::array_t<long> indices, py::array_t<float> data, const py::array_t<long> lengths);
+  query_t pullData(py::array_t<long> indices, py::array_t<float> data, const py::array_t<long> lengths);
   /*
     wait_data waits until a query success
   */
   void waitData(query_t query);
+  static void initBinding(py::module &m);
 
 private:
+  Worker();
+  query_t pushData_impl(const long* indices, int index_size, float* data, const long* lengths);
+  query_t pullData_impl(const long* indices, int index_size, float* data, const long* lengths);
   void _pushData(Key idx, float *vals, int len, std::vector<int>& timestamp);
   void _pullData(Key idx, float *vals, int len, std::vector<int>& timestamp);
   void waitTimestamp(int timestamp) { _kvworker.Wait(timestamp); }
@@ -39,8 +32,5 @@ private:
   query_t next_query = 0;
   // protect query2timestamp and next_query
   std::mutex data_mu;
-
-  int _thread_num = 3;
+  KVWorker _kvworker;
 };
-
-extern Worker worker;

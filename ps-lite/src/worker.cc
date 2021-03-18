@@ -2,7 +2,22 @@
 
 Worker::Worker() : _kvworker(0, 0) {}
 
-Worker::query_t Worker::pushData(const long* indices, int index_size, float* data, const long* lengths) {
+Worker::query_t Worker::pushData(py::array_t<long> indices, py::array_t<float> data, const py::array_t<long> lengths) {
+  PYTHON_CHECK_ARRAY(indices);
+  PYTHON_CHECK_ARRAY(data);
+  PYTHON_CHECK_ARRAY(lengths);
+  return pushData_impl(indices.data(), indices.size(), data.mutable_data(), lengths.data());
+}
+
+Worker::query_t Worker::pullData(py::array_t<long> indices, py::array_t<float> data, const py::array_t<long> lengths) {
+  PYTHON_CHECK_ARRAY(indices);
+  PYTHON_CHECK_ARRAY(data);
+  PYTHON_CHECK_ARRAY(lengths);
+  return pullData_impl(indices.data(), indices.size(), data.mutable_data(), lengths.data());
+}
+
+Worker::query_t Worker::pushData_impl(const long* indices, int index_size, float* data, const long* lengths) {
+  py::gil_scoped_release release;
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
@@ -18,7 +33,8 @@ Worker::query_t Worker::pushData(const long* indices, int index_size, float* dat
 }
 
 // this is almost the same as push_data
-Worker::query_t Worker::pullData(const long* indices, int index_size, float* data, const long* lengths) {
+Worker::query_t Worker::pullData_impl(const long* indices, int index_size, float* data, const long* lengths) {
+  py::gil_scoped_release release;
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
@@ -74,4 +90,15 @@ void Worker::_pullData(Key idx, float* vals, int len, std::vector<int>& timestam
   timestamp.push_back(ts);
 }
 
-Worker worker;
+void Worker::initBinding(py::module& m) {
+  py::class_<Worker>(m, "graph worker")
+    .def("push_data", &Worker::pushData)
+    .def("pull_data", &Worker::pullData)
+    .def("wait", &Worker::waitData);
+  m.def("get_handle", Worker::Get, py::return_value_policy::reference);
+}
+
+Worker& Worker::Get() {
+  static Worker w;
+  return w;
+}

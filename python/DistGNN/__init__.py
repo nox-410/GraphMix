@@ -5,3 +5,8 @@ def __handle_import():
     lib_path = os.path.join(cur_path, '../../build/lib/')
     sys.path.append(lib_path)
 __handle_import()
+import libc_PS as _PS
+from . import dataset
+from . import graph
+from . import layer
+from . import distributed

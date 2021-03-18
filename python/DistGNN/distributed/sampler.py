@@ -1,10 +1,10 @@
 from ..graph import Graph, Sampler
 from ..cache import Cache
-from .ps import ps_get_worker_communicator
 import libc_GNN as _C
 
 import numpy as np
 import time
+import libc_PS as _PS
 
 def _load_graph_shard(path, rank, nrank):
     import os, yaml
@@ -24,7 +24,7 @@ def _load_graph_shard(path, rank, nrank):
 
 class DistributedSubgraphSampler(Sampler):
     def __init__(self, path, num, length, rank, nrank, num_sample_thread=1,
-        cache_size_factor = 0.2, reduce_nonlocal_factor = 0.5,transformer=None, backend="ps"):
+        cache_size_factor = 0.2, reduce_nonlocal_factor = 0.5,transformer=None):
         super().__init__(num_sample_thread, transformer)
         x, y, edges, meta = _load_graph_shard(path, rank, nrank)
         self.graph = Graph(x, y, edges[rank], meta['class'])
@@ -36,25 +36,15 @@ class DistributedSubgraphSampler(Sampler):
         self.reduce_nonlocal_factor = reduce_nonlocal_factor
         self.cache = Cache(int(self.graph.num_nodes * cache_size_factor), "Priority")
 
-        assert (backend in ["ps", "grpc"])
-        self.backend = backend
-        if backend == "grpc":
-            from .grpc import grpc_download, grpc_upload, grpc_stubs_init
-            self.data_download = grpc_download
-            self.data_upload = grpc_upload
-        elif backend == "ps":
-            from .ps import ps_download, ps_upload
-            self.data_download = ps_download
-            self.data_upload = ps_upload
+        from .ps import ps_download, ps_upload
+        self.data_download = ps_download
+        self.data_upload = ps_upload
         # when init, upload its local shard of graph into the ps
-        self.data_upload(
+        ps_upload(
             self.graph.x, self.graph.y,
             self._internal.indptr, self._internal.indices, self._internal.nodes_from
         )
-        ps_get_worker_communicator().BarrierWorker()
-        if backend == "grpc":
-            # setup rpc channels
-            grpc_stubs_init()
+        _PS.barrier()
 
     def _sample(self):
         #initiate random_walk heads within local subgraph
@@ -114,7 +104,7 @@ class DistributedSubgraphSampler(Sampler):
 
 class DistributedGraphSageSampler(Sampler):
     def __init__(self, path, batch_size, depth, width, rank, nrank, num_sample_thread=1,
-        cache_size_factor = 0.2, reduce_nonlocal_factor = 0.5,transformer=None, backend="ps"):
+        cache_size_factor = 0.2, reduce_nonlocal_factor = 0.5,transformer=None):
         super().__init__(num_sample_thread, transformer)
         x, y, edges, meta = _load_graph_shard(path, rank, nrank)
         self.graph = Graph(x, y, edges[rank], meta['class'])
@@ -127,25 +117,15 @@ class DistributedGraphSageSampler(Sampler):
         self.reduce_nonlocal_factor = reduce_nonlocal_factor
         self.cache = Cache(int(self.graph.num_nodes * cache_size_factor), "Priority")
 
-        assert (backend in ["ps", "grpc"])
-        self.backend = backend
-        if backend == "grpc":
-            from .grpc import grpc_download, grpc_upload, grpc_stubs_init
-            self.data_download = grpc_download
-            self.data_upload = grpc_upload
-        elif backend == "ps":
-            from .ps import ps_download, ps_upload
-            self.data_download = ps_download
-            self.data_upload = ps_upload
+        from .ps import ps_download, ps_upload
+        self.data_download = ps_download
+        self.data_upload = ps_upload
         # when init, upload its local shard of graph into the ps
         self.data_upload(
             self.graph.x, self.graph.y,
             self._internal.indptr, self._internal.indices, self._internal.nodes_from
         )
-        ps_get_worker_communicator().BarrierWorker()
-        if backend == "grpc":
-            # setup rpc channels
-            grpc_stubs_init()
+        _PS.barrier()
 
     def _sample_multiple_local(self, local_heads_id):
         nids, nfroms = [], []

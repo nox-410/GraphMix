@@ -17,4 +17,4 @@ if __name__ =='__main__':
     parser.add_argument("config")
     parser.add_argument("--path", "-p", required=True)
     args = parser.parse_args()
-    DistGNN.launcher(args, test)
+    DistGNN.launcher(test, args)

@@ -291,20 +291,7 @@ void Van::Start(int customer_id) {
         CHECK(!interface.empty()) << "failed to get the interface";
       }
       int port = GetAvailablePort();
-      const char* pstr = Environment::Get()->find("PORT");
-      if (pstr) port = atoi(pstr);
 
-      // note: @zhipeng, for distributed training, enable this.
-      if(role == Node::WORKER){
-        ip = std::string(CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_WORKER_URI")));
-        port = atoi(CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_WORKER_PORT")));
-        //LG << "worker " << "ip&port " << ip << ":" << port;
-      }
-      else if(role == Node::SERVER){
-        ip = std::string(CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_SERVER_URI")));
-        port = atoi(CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_SERVER_PORT")));
-        //LG << "server " << "ip&port " << ip << ":" << port;
-      }
       CHECK(!ip.empty()) << "failed to get ip";
       CHECK(port) << "failed to get a port";
       my_node_.hostname = ip;

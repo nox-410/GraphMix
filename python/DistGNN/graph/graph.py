@@ -43,12 +43,13 @@ def mp_matrix(graph, device, system="Athena", use_original_gcn_norm=False):
     elif system=="Pytorch":
         import torch
         indices = np.vstack((graph.edge_index[1], graph.edge_index[0]))
-        mp_mat = torch.sparse.FloatTensor(
-            indices=torch.LongTensor(indices),
+        mp_mat = torch.sparse_coo_tensor(
+            indices=indices,
             values=torch.FloatTensor(norm),
-            size=(graph.num_nodes, graph.num_nodes)
+            size=(graph.num_nodes, graph.num_nodes),
+            device=device,
         )
-        return mp_mat.to(device)
+        return mp_mat
     else:
         raise NotImplementedError
 

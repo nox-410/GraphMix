@@ -27,7 +27,8 @@ class Shard():
         self.meta = _load_meta(path)
 
     def upload(self, sync=True):
-        task = _PS.push(self.index, self.f_feat, self.i_feat, self.edges)
-        _PS.wait(task)
+        comm = _PS.get_handle()
+        task = comm.push(self.index, self.f_feat, self.i_feat, self.edges)
+        comm.wait(task)
         if sync:
             _PS.barrier()

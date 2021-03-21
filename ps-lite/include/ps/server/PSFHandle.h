@@ -20,7 +20,7 @@ public:
       get<1>(response) = iter->second.i_feat;
       get<2>(response) = iter->second.edge;
     } else {
-      LF << "Key does not exist on PS in DensePull:" << k;
+      LF << "Key does not exist on PS in NodePull:" << k;
     }
   }
 
@@ -33,7 +33,7 @@ public:
       node.edge = get<3>(request);
       store[k] = node;
     } else {
-      LF << "Key already exist on PS in DensePush:" << k;
+      LF << "Key already exist on PS in NodePush:" << k;
     }
   }
 

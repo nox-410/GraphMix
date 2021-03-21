@@ -10,6 +10,10 @@ PYBIND11_MAKE_OPAQUE(NodePack);
 PYBIND11_MODULE(libc_GNN, m) {
   m.doc() = "GNN C++ plugin"; // optional module docstring
   py::bind_map<NodePack>(m, "NodePack");
+  py::class_<NodeData>(m, "NodeData")
+    .def_property_readonly("f", [](NodeData &n){ return bind::svec_nocp(n.f_feat); } )
+    .def_property_readonly("i", [](NodeData &n){ return bind::svec_nocp(n.i_feat); } )
+    .def_property_readonly("e", [](NodeData &n){ return bind::svec_nocp(n.edge); } );
 
   py::class_<PyGraph>(m, "Graph")
     .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))

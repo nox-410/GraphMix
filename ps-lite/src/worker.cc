@@ -29,8 +29,8 @@ Worker::pushData(py::array_t<node_id> indices, py::array_t<graph_float> f_feat, 
   auto nodes = NodePack();
   for (size_t i = 0 ; i < nnodes; i++) {
     NodeData node;
-    node.i_feat = SArray<graph_int>(i_feat.mutable_at(i), i_len);
-    node.f_feat = SArray<graph_float>(f_feat.mutable_at(i), f_len);
+    node.i_feat = SArray<graph_int>(i_feat.mutable_data(i, 0), i_len);
+    node.f_feat = SArray<graph_float>(f_feat.mutable_data(i, 0), f_len);
     nodes.emplace(indices.at(i), node);
   }
   std::unordered_map<node_id, size_t> deg;
@@ -63,7 +63,7 @@ Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   data_mu.unlock();
   for (size_t i = 0; i < n; i++) {
     node_id idx = indices[i];
-    auto cb = getCallBack<NodePull>(nodes[idx]);
+    auto cb = getCallBack<NodePull>(std::ref(nodes[idx]));
     PSFData<NodePull>::Request request(mapWkeyToSkey(idx));
     int ts = _kvworker.Request<NodePull>(request, cb);
     timestamps.push_back(ts);

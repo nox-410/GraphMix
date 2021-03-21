@@ -6,11 +6,17 @@ import DistGNN
 def test(args):
     rank = DistGNN._PS.rank()
     nrank = DistGNN._PS.nrank()
-    DistGNN.distributed.ps_init()
-    with DistGNN.distributed.DistributedGraphSageSampler(args.path, 128, 2, 2,
-        rank=rank, nrank=nrank , cache_size_factor=1, reduce_nonlocal_factor=0, num_sample_thread=4) as sampler:
-        graph, mask = sampler.sample()
-        print(graph)
+    shard = DistGNN.distributed.Shard(args.path, rank)
+    print("load")
+    shard.upload()
+    if rank != 0:
+        return
+    comm = DistGNN._PS.get_handle()
+    pack = DistGNN._C.NodePack()
+    ts = comm.pull([1,2,3], pack)
+    comm.wait(ts)
+    print(pack[1].i, pack[1].f, pack[1].e)
+
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

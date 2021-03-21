@@ -6,6 +6,7 @@ def __handle_import():
     sys.path.append(lib_path)
 __handle_import()
 import libc_PS as _PS
+import libc_GNN as _C
 from . import dataset
 from . import graph
 from . import layer

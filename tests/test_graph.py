@@ -1,22 +1,43 @@
 import numpy as np
 import argparse
-
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
 import DistGNN
+
+max_thread = 5
 
 def test(args):
     rank = DistGNN._PS.rank()
     nrank = DistGNN._PS.nrank()
     shard = DistGNN.distributed.Shard(args.path, rank)
-    print("load")
     shard.upload()
     if rank != 0:
         return
     comm = DistGNN._PS.get_handle()
-    pack = DistGNN._C.NodePack()
-    ts = comm.pull([1,2,3], pack)
-    comm.wait(ts)
-    print(pack[1].i, pack[1].f, pack[1].e)
+    t = ThreadPoolExecutor(max_workers=max_thread)
+    indices = np.arange(shard.meta["node"])
+    item_count = 0
+    def pull_data():
+        pack = DistGNN._C.NodePack()
+        query = comm.pull(indices, pack)
+        comm.wait(query)
+        nonlocal item_count
+        item_count += len(indices)
 
+    def watch():
+        nonlocal item_count
+        start = time.time()
+        while True:
+            time.sleep(1)
+            speed = item_count / (time.time() - start)
+            print("speed : {} item/s".format(speed))
+    task_list = [None for i in range(max_thread)]
+    threading.Thread(target=watch).start()
+    while True:
+        for i in range(max_thread):
+            if task_list[i] is None or task_list[i].done():
+                task_list[i] = t.submit(pull_data)
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

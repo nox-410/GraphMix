@@ -5,7 +5,7 @@
 
 #include "common/binding.h"
 #include "common/sarray.h"
-#include "graph_type.h"
+#include "common/graph_type.h"
 
 class PyGraph {
 private:

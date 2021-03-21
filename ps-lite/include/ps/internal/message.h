@@ -102,8 +102,7 @@ struct Meta {
   /** \brief default constructor */
   Meta()
       : app_id(kEmpty), customer_id(kEmpty), timestamp(kEmpty),
-        sender(kEmpty), recver(kEmpty), request(false), priority(kEmpty),
-        psftype(PsfType::DensePull) {}
+        sender(kEmpty), recver(kEmpty), request(false), priority(kEmpty) {}
   std::string DebugString() const {
     std::stringstream ss;
     if (sender == Node::kEmpty) {

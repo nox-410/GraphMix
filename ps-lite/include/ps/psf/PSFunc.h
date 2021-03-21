@@ -13,8 +13,8 @@ namespace ps {
 
 enum PsfType {
   /* Dense ops */
-  DensePush,
-  DensePull,
+  NodePush,
+  NodePull,
   kNumPSfunction
 };
 
@@ -40,4 +40,4 @@ function<void(const typename PSFData<ftype>::Response&)> getCallBack(Args&&... a
 
 }
 
-#include "dense.h"
+#include "node_func.h"

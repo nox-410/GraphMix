@@ -1,5 +1,5 @@
 #include "common/binding.h"
-#include "graph_type.h"
+#include "common/graph_type.h"
 
 #include "graph.h"
 

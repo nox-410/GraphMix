@@ -1,26 +1,29 @@
 from ..graph import Graph, Sampler
 from ..cache import Cache
-import libc_GNN as _C
 
 import numpy as np
 import time
+import os, yaml
+
+import libc_GNN as _C
 import libc_PS as _PS
 
-def _load_graph_shard(path, rank, nrank):
-    import os, yaml
-    with open(os.path.join(path, "meta.yml"), 'rb') as f:
-        meta = yaml.load(f.read(), Loader=yaml.FullLoader)
-    path = os.path.join(path, "part{}".format(rank))
-    with open(os.path.join(path, "edge.npz"), 'rb') as f:
+def _load_graph_shard(path, shard_idx):
+    path = os.path.join(path, "part{}".format(shard_idx))
+    with open(os.path.join(path, "graph.npz"), 'rb') as f:
         data = np.load(f)
-        edges = []
-        for i in range(nrank):
-            edges.append(data.get("edge_"+str(i)))
+        edges = data["edge"]
+        index = data["index"]
     with open(os.path.join(path, "data.npz"), 'rb') as f:
         data = np.load(f)
-        x = data.get("x")
-        y = data.get("y")
-    return x, y, edges, meta
+        int_feature = data["i"]
+        float_feature = data["f"]
+    return index, edges, float_feature, int_feature
+
+def _load_meta(path):
+    with open(os.path.join(path, "meta.yml"), 'rb') as f:
+        meta = yaml.load(f.read(), Loader=yaml.FullLoader)
+    return meta
 
 class DistributedSubgraphSampler(Sampler):
     def __init__(self, path, num, length, rank, nrank, num_sample_thread=1,

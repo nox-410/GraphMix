@@ -48,12 +48,9 @@ public:
    * \param cb the callback returned by getCallback<PSfType>(args...)
    */
   template<PsfType ftype, typename Tuple, typename CallBack>
-  int Request(const Tuple &request, const CallBack &cb) {
+  int Request(const Tuple &request, const CallBack &cb, int target_server_id) {
     int timestamp = obj_->NewRequest(kServerGroup);
     CallbackStore<ftype>::Get()->store(timestamp, cb);
-    // Find the server
-    Key key = get<0>(request);
-    int target_server_id = queryServer(key);
     // Create message
     Message msg;
     tupleEncode(request, msg.data);
@@ -65,15 +62,6 @@ public:
     msg.meta.request = true;
     Postoffice::Get()->van()->Send(msg);
     return timestamp;
-  }
-  int queryServer(Key key) {
-    const std::vector<Range>& server_range = Postoffice::Get()->GetServerKeyRanges();
-    size_t server_id = 0;
-    size_t server_num = server_range.size();
-    while (server_id < server_num && key >= server_range[server_id].begin()) {
-        server_id++;
-    }
-    return int(server_id - 1);
   }
 private:
   template<PsfType ftype>

@@ -1,10 +1,7 @@
 #include "ps/worker/worker.h"
 
-static Key mapWkeyToSkey(node_id idx) {
-  const static std::vector<Range>& server_range = Postoffice::Get()->GetServerKeyRanges();
-  int server = idx % server_range.size();
-  Key k = server_range[server].begin() + idx;
-  return k;
+inline static int getserver(node_id idx) {
+  return idx % Postoffice::Get()->num_servers();
 }
 
 Worker::Worker() : _kvworker(0, 0) {}
@@ -42,8 +39,8 @@ Worker::pushData(py::array_t<node_id> indices, py::array_t<graph_float> f_feat, 
   }
   auto cb = getCallBack<NodePush>();
   for (auto &node : nodes) {
-    PSFData<NodePush>::Request request(mapWkeyToSkey(node.first), node.second.f_feat, node.second.i_feat, node.second.edge);
-    int ts = _kvworker.Request<NodePush>(request, cb);
+    PSFData<NodePush>::Request request(node.first, node.second.f_feat, node.second.i_feat, node.second.edge);
+    int ts = _kvworker.Request<NodePush>(request, cb, getserver(node.first));
     timestamps.push_back(ts);
   }
   return cur_query;
@@ -61,11 +58,31 @@ Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
   data_mu.unlock();
-  for (size_t i = 0; i < n; i++) {
-    node_id idx = indices[i];
-    auto cb = getCallBack<NodePull>(std::ref(nodes[idx]));
-    PSFData<NodePull>::Request request(mapWkeyToSkey(idx));
-    int ts = _kvworker.Request<NodePull>(request, cb);
+  int nserver = Postoffice::Get()->num_servers();
+  std::vector<SArray<node_id>> keys(nserver);
+  for (size_t i = 0; i < n; i++)
+    keys[getserver(indices[i])].push_back(indices[i]);
+
+  for (int server = 0; server < nserver; server++) {
+    if (keys[server].size() == 0) continue;
+    auto pull_keys = keys[server];
+    PSFData<NodePull>::Request request(pull_keys);
+    auto callback = [pull_keys] (const PSFData<NodePull>::Response &response, NodePack &nodes){
+      auto f_feat = std::get<0>(response);
+      auto i_feat= std::get<1>(response);
+      auto edge = std::get<2>(response);
+      auto offset = std::get<3>(response);
+      auto f_len = f_feat.size() / (offset.size() - 1), i_len = i_feat.size() / (offset.size() - 1);
+      CHECK_EQ(offset[offset.size() - 1], edge.size()) << std::endl;
+      for (size_t i = 0; i < pull_keys.size(); i++) {
+        auto &node = nodes[pull_keys[i]];
+        node.f_feat = f_feat.segment(i * f_len, (i + 1) * f_len);
+        node.i_feat = i_feat.segment(i * i_len, (i + 1) * i_len);
+        node.edge = edge.segment(offset[i], offset[i + 1]);
+      }
+    };
+    auto cb = std::bind(callback, std::placeholders::_1, std::ref(nodes));
+    int ts = _kvworker.Request<NodePull>(request, cb, server);
     timestamps.push_back(ts);
   }
   return cur_query;
@@ -75,6 +92,7 @@ Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
     wait_data waits until a query success
 */
 void Worker::waitData(query_t query) {
+  py::gil_scoped_release release;
   data_mu.lock();
   auto iter = query2timestamp.find(query);
   if (iter == query2timestamp.end()) {

@@ -17,18 +17,18 @@ def part_graph(dataset_name, nparts, output_path):
     partition = dataset.graph.part_graph(nparts)
     print("step2: partition graph complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
+    float_feature = dataset.x.astype(np.float32)
+    int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
     for i in range(nparts):
         part_dir = os.path.join(output_path, "part{}".format(i))
         os.mkdir(part_dir)
         edge_path = os.path.join(part_dir, "graph.npz")
         data_path = os.path.join(part_dir, "data.npz")
-        float_feature = dataset.x.astype(np.float32)
-        int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
-
+        index = partition[i][0]
         with open(edge_path, 'wb') as f:
-            np.savez(file=f, index=partition[i][0], edge=np.vstack(partition[i][1:3]))
+            np.savez(file=f, index=index, edge=np.vstack(partition[i][1:3]))
         with open(data_path, 'wb') as f:
-            np.savez(file=f, f=float_feature, i=int_feature)
+            np.savez(file=f, f=float_feature[index], i=int_feature[index])
     print("step3: save partitioned graph, time cost {:.3f}s".format(time.time()-start))
     part_meta = {
         "nodes" : [len(g[0]) for g in partition],

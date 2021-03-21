@@ -93,8 +93,8 @@ void Worker::waitData(query_t query) {
 
 void Worker::initBinding(py::module& m) {
   py::class_<Worker>(m, "graph worker")
-    .def("push_data", &Worker::pushData)
-    .def("pull_data", &Worker::pullData)
+    .def("push", &Worker::pushData)
+    .def("pull", &Worker::pullData)
     .def("wait", &Worker::waitData);
   m.def("get_handle", Worker::Get, py::return_value_policy::reference);
 }

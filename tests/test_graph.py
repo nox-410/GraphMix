@@ -19,11 +19,12 @@ def test(args):
     indices = np.arange(shard.meta["node"])
     item_count = 0
     def pull_data():
-        pack = DistGNN._C.NodePack()
-        query = comm.pull(indices, pack)
-        comm.wait(query)
-        nonlocal item_count
-        item_count += len(indices)
+        while True:
+            pack = DistGNN._C.NodePack()
+            query = comm.pull(indices, pack)
+            comm.wait(query)
+            nonlocal item_count
+            item_count += len(indices)
 
     def watch():
         nonlocal item_count
@@ -34,10 +35,9 @@ def test(args):
             print("speed : {} item/s".format(speed))
     task_list = [None for i in range(max_thread)]
     threading.Thread(target=watch).start()
-    while True:
-        for i in range(max_thread):
-            if task_list[i] is None or task_list[i].done():
-                task_list[i] = t.submit(pull_data)
+    for i in range(max_thread):
+        task_list[i] = t.submit(pull_data)
+    time.sleep(1000)
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

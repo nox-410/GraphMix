@@ -12,8 +12,7 @@ Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv
     : app_id_(app_id), customer_id_(customer_id), recv_handle_(recv_handle) {
   cur_timestamp = 0;
   Postoffice::Get()->AddCustomer(this);
-  // for debug set num_threads = 5;
-  int num_threads = 5;
+  int num_threads = 1;
   for(int i = 0; i < num_threads; i++) {
       recv_threads_.emplace_back(new std::thread(&Customer::Receiving, this));
   }

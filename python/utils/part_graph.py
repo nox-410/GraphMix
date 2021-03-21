@@ -4,52 +4,46 @@ import numpy as np
 import time
 import yaml
 
-from GNN.dataset import load_dataset, load_sparse_dataset
+from DistGNN.dataset import load_dataset
 
-def part_graph(dataset, nparts, output_path, sparse):
+def part_graph(dataset_name, nparts, output_path):
     if os.path.exists(output_path):
         os.rmdir(output_path)
     os.mkdir(output_path)
     start = time.time()
-    if sparse:
-        graph, idx_max = load_sparse_dataset(dataset)
-    else:
-        graph = load_dataset(dataset)
+    dataset = load_dataset(dataset_name)
     print("step1: load_dataset complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
-    subgraphs, edge_index, edges = graph.part_graph(nparts)
+    partition = dataset.graph.part_graph(nparts)
     print("step2: partition graph complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
     for i in range(nparts):
         part_dir = os.path.join(output_path, "part{}".format(i))
         os.mkdir(part_dir)
-        edge_path = os.path.join(part_dir, "edge.npz")
+        edge_path = os.path.join(part_dir, "graph.npz")
         data_path = os.path.join(part_dir, "data.npz")
-        all_edges = {}
-        for j in range(nparts):
-            index = edge_index[i][j]
-            all_edges["edge_"+str(j)] = (edges[0][index], edges[1][index])
+        float_feature = dataset.x.astype(np.float32)
+        int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
 
         with open(edge_path, 'wb') as f:
-            np.savez(file=f, **all_edges)
+            np.savez(file=f, index=partition[i][0], edge=np.vstack(partition[i][1:3]))
         with open(data_path, 'wb') as f:
-            np.savez(file=f, x=subgraphs[i].x, y=subgraphs[i].y)
+            np.savez(file=f, f=float_feature, i=int_feature)
     print("step3: save partitioned graph, time cost {:.3f}s".format(time.time()-start))
-    parititon = {
-        "nodes" : [g.num_nodes for g in subgraphs],
-        "edges" : [g.num_edges for g in subgraphs],
+    part_meta = {
+        "nodes" : [len(g[0]) for g in partition],
+        "edges" : [len(g[1]) for g in partition],
     }
     meta = {
-        "name": dataset,
-        "node": graph.num_nodes,
-        "edge": graph.num_edges,
-        "feature": graph.num_features,
-        "class": graph.num_classes,
+        "name": dataset_name,
+        "node": dataset.graph.num_nodes,
+        "edge": dataset.graph.num_edges,
+        "float_feature": float_feature.shape[1],
+        "int_feature": int_feature.shape[1],
+        "class": dataset.num_classes,
         "num_part": nparts,
-        "partition": parititon,
+        "partition": part_meta,
     }
-    if sparse:
-        meta["idx_max"] = idx_max
     edge_path = os.path.join(output_path, "meta.yml")
     with open(edge_path, 'w') as f:
         yaml.dump(meta, f, sort_keys=False)
@@ -59,10 +53,9 @@ if __name__ =='__main__':
     parser.add_argument("--dataset", "-d", required=True)
     parser.add_argument("--nparts", "-n", required=True)
     parser.add_argument("--path", "-p", required=True)
-    parser.add_argument("--sparse", action="store_true")
     args = parser.parse_args()
     output_path = str(args.path)
     nparts = int(args.nparts)
     dataset = str(args.dataset)
     output_path = os.path.join(output_path, dataset)
-    part_graph(dataset, nparts, output_path, args.sparse)
+    part_graph(dataset, nparts, output_path)

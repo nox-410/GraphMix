@@ -1,10 +1,8 @@
-#ifndef GNN_UTILS_H
-#define GNN_UTILS_H
+#pragma once
 
-#include "common.h"
+#include "common/binding.h"
 
 #include "graph.h"
-#include "sampler.h"
 
 /*
     given an array with size, return an array with the same size
@@ -20,10 +18,8 @@ py::array_t<long> randomIndex(py::array_t<long> arr);
             ...
         ]
 */
-PyGraph constructGraph(py::list sample_data, PyGraph &graph,
-py::array_t<long> indptr_py, py::array_t<long> indices_py,
-  py::array_t<long> nodes_from_py, int rank, int nrank);
+// PyGraph constructGraph(py::list sample_data, PyGraph &graph,
+// py::array_t<long> indptr_py, py::array_t<long> indices_py,
+//   py::array_t<long> nodes_from_py, int rank, int nrank);
 
 py::array_t<long> sampleHead(py::array_t<long> indptr, py::array_t<long> indices, size_t required_num);
-
-#endif /* GNN_UTILS_H */

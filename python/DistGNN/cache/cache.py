@@ -3,7 +3,7 @@ import libc_GNN as _C
 import threading
 import queue
 
-class Cache(_C.Cache):
+class Cache():
     def __init__(self, limit, policy):
         # We don't allow cache size=0, that will incur an error
         if limit == 0:

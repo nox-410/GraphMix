@@ -4,4 +4,5 @@
 *.pkl.gz
 .dataset
 build/
+data/
 .vscode/

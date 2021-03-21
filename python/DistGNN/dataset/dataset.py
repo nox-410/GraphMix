@@ -1,75 +1,66 @@
 import os
 from ..graph import Graph
-import torch.optim
 import numpy as np
-dataset_list = (
-    "Cora",
-    "ogbn-products",
-    "ogbn-papers100M",
-    "Amazon",
-    "Reddit",
-    "PubMed",
-    "AmazonSparse"
-)
+
 dataset_root = os.path.dirname(__file__)+"/.dataset/"
+
+class PlanetoidDataset():
+    def __init__(self, root, name):
+        from torch_geometric.datasets import Planetoid
+        dataset = Planetoid(root=root, name=name)
+        data = dataset[0]
+        self.graph = Graph(
+            edge_index=data.edge_index.numpy(),
+            num_nodes=data.num_nodes
+        )
+        self.x = data.x.numpy()
+        self.y = data.y.numpy()
+        self.train_mask = data.train_mask.numpy()
+        self.num_classes = dataset.num_classes
+
+class RedditDataset():
+    def __init__(self, root):
+        from torch_geometric.datasets import Reddit
+        dataset = Reddit(root=root)
+        data = dataset[0]
+        self.graph = Graph(
+            edge_index=data.edge_index.numpy(),
+            num_nodes=data.num_nodes
+        )
+        self.x = data.x.numpy()
+        self.y = data.y.numpy()
+        self.train_mask = data.train_mask.numpy()
+        self.num_classes = dataset.num_classes
+
+class OGBDataset():
+    def __init__(self, root, name):
+        from ogb.nodeproppred import PygNodePropPredDataset
+        dataset = PygNodePropPredDataset(name=name, root=root)
+        data = dataset[0]
+        self.graph = Graph(
+            edge_index=data.edge_index.numpy(),
+            num_nodes=data.num_nodes
+        )
+        split_idx = dataset.get_idx_split()
+        train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+
+        self.x = data.x.numpy()
+        self.y = data.y.numpy().squeeze()
+        self.train_mask = np.zeros(data.num_nodes, np.bool)
+        self.train_mask[train_idx] = True
+        self.num_classes = dataset.num_classes
 
 #building the dataset using numpy
 def load_dataset(name):
     root = dataset_root + name
-    if name=="Cora":
-        from torch_geometric.datasets import Planetoid
-        dataset = Planetoid(root=root, name='Cora')
-        data = dataset[0]
-        g = Graph(
-            x=data.x.numpy(),
-            y=data.y.numpy(),
-            edge_index=data.edge_index.numpy(),
-            num_classes=dataset.num_classes
-        )
-    elif name=="PubMed":
-        from torch_geometric.datasets import Planetoid
-        dataset = Planetoid(root=root, name='PubMed')
-        data = dataset[0]
-        g = Graph(
-            x=data.x.numpy(),
-            y=data.y.numpy(),
-            edge_index=data.edge_index.numpy(),
-            num_classes=dataset.num_classes
-        )
-    elif name=="Amazon":
-        from torch_geometric.datasets import Amazon
-        dataset = Amazon(root=root, name="Computers")
-        data = dataset[0]
-        g = Graph(
-            x=data.x.numpy(),
-            y=data.y.numpy(),
-            edge_index=data.edge_index.numpy(),
-            num_classes=dataset.num_classes
-        )
+    if name=="Cora" or name=="PubMed":
+        return PlanetoidDataset(root, name)
     elif name=="Reddit":
-        from torch_geometric.datasets import Reddit
-        dataset = Reddit(root=root)
-        data = dataset[0]
-        g = Graph(
-            x=data.x.numpy(),
-            y=data.y.numpy(),
-            edge_index=data.edge_index.numpy(),
-            num_classes=dataset.num_classes
-        )
+        return RedditDataset(root)
     elif name=="ogbn-products" or name=="ogbn-papers100M":
-        from ogb.nodeproppred import PygNodePropPredDataset
-        dataset = PygNodePropPredDataset(name=name, root=root)
-        data = dataset[0]
-        g = Graph(
-            x=data.x.numpy(),
-            y=data.y.numpy().squeeze(),
-            edge_index=data.edge_index.numpy(),
-            num_classes=dataset.num_classes
-        )
+        return OGBDataset(root, name)
     else:
         raise NotImplementedError
-
-    return g
 
 def load_sparse_dataset(name):
     root = dataset_root + name

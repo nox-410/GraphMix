@@ -5,9 +5,10 @@
 
 #include <vector>
 
+#include "sarray.h"
+
 namespace py = pybind11;
 
-namespace ps {
 namespace bind {
 
 // snippet for converting std::vector
@@ -16,9 +17,21 @@ py::array_t<T> vec(std::vector<T> &v) {
   return py::array_t<T>(v.size(), v.data());
 }
 
+// snippet for converting SArray
+template <typename T>
+py::array_t<T> svec(SArray<T> &v) {
+  return py::array_t<T>(v.size(), v.data());
+}
+
 // snippet for converting std::vector (but without copy)
 template <typename T>
 py::array_t<T> vec_nocp(std::vector<T> &v) {
+  return py::array_t<T>(v.size(), v.data(), py::none());
+}
+
+// snippet for converting SArray (but without copy)
+template <typename T>
+py::array_t<T> svec_nocp(SArray<T> &v) {
   return py::array_t<T>(v.size(), v.data(), py::none());
 }
 
@@ -54,5 +67,3 @@ std::vector<T> a2v(py::array_t<T> &arr) {
     throw std::runtime_error(err + #array);                           \
   }                                                                   \
 }
-
-} //namespace ps

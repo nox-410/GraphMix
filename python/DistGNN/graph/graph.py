@@ -10,48 +10,24 @@ def shuffle(graph):
     perm = np.random.permutation(graph.num_nodes)
     rperm = np.argsort(perm) # reversed permutation
     return Graph(
-        graph.x[rperm],
-        graph.y[rperm],
         (perm[graph.edge_index[0]], perm[graph.edge_index[1]]),
-        graph.num_classes
+        graph.num_nodes
     )
-
-def split_training_set(graph, n):
-    n = int(n)
-    assert(0 < n and n <= graph.num_nodes)
-    x = graph.x[:n]
-    y = graph.y[:n]
-    included_edges = (graph.edge_index[0] < n) * (graph.edge_index[1] < n)
-    included_edges = np.where(included_edges)
-    edge_index = graph.edge_index[0][included_edges], graph.edge_index[1][included_edges]
-    return Graph(x, y, edge_index, graph.num_classes)
 
 def dense_efficient(graph):
     return graph.num_edges / (graph.num_nodes ** 2)
 
-def mp_matrix(graph, device, system="Athena", use_original_gcn_norm=False):
+def mp_matrix(graph, device, use_original_gcn_norm=False):
     norm = graph.gcn_norm(use_original_gcn_norm)
-    if system=="Athena":
-        from athena import ndarray
-        mp_mat = ndarray.sparse_array(
-            values=norm,
-            indices=(graph.edge_index[1], graph.edge_index[0]),
-            shape=(graph.num_nodes, graph.num_nodes),
-            ctx=device
-        )
-        return mp_mat
-    elif system=="Pytorch":
-        import torch
-        indices = np.vstack((graph.edge_index[1], graph.edge_index[0]))
-        mp_mat = torch.sparse_coo_tensor(
-            indices=indices,
-            values=torch.FloatTensor(norm),
-            size=(graph.num_nodes, graph.num_nodes),
-            device=device,
-        )
-        return mp_mat
-    else:
-        raise NotImplementedError
+    import torch
+    indices = np.vstack((graph.edge_index[1], graph.edge_index[0]))
+    mp_mat = torch.sparse_coo_tensor(
+        indices=indices,
+        values=torch.FloatTensor(norm),
+        size=(graph.num_nodes, graph.num_nodes),
+        device=device,
+    )
+    return mp_mat
 
 def pick_edges(edge_index, index):
     return edge_index[0][index], edge_index[1][index]

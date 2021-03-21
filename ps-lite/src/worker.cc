@@ -60,9 +60,10 @@ Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   data_mu.unlock();
   int nserver = Postoffice::Get()->num_servers();
   std::vector<SArray<node_id>> keys(nserver);
-  for (size_t i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++) {
     keys[getserver(indices[i])].push_back(indices[i]);
-
+    nodes[indices[i]] = NodeData(); // avoid race condition in callback
+  }
   for (int server = 0; server < nserver; server++) {
     if (keys[server].size() == 0) continue;
     auto pull_keys = keys[server];

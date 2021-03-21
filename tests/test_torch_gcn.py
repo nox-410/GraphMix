@@ -50,11 +50,16 @@ def test(args):
             y = torch.Tensor(g_sample.y).to(device, torch.long)
             out = model(x, g_sample)
             loss = F.cross_entropy(out, y)
-            acc = int((out.argmax(axis=1) == y).sum()) / y.shape[0]
-            print("epoch={} loss={:.5f} acc={:.5f}".format(i, float(loss), acc))
+            count = int((out.argmax(axis=1) == y).sum())
+            total = y.shape[0]
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+            t = torch.tensor([count, total, float(loss) / dist.get_world_size()], dtype=torch.float64, device='cuda')
+            dist.barrier()  # synchronizes all processes
+            dist.all_reduce(t, op=torch.distributed.ReduceOp.SUM)
+            if dist.get_rank() == 0:
+                print("epoch={} loss={:.5f} acc={:.5f}".format(i, t[2], t[0]/t[1]))
 
 
 if __name__ =='__main__':

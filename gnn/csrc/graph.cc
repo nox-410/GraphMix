@@ -152,29 +152,43 @@ std::vector<idx_t> PyGraph::partition(idx_t nparts, bool balance_edge) {
   return parts;
 }
 
-py::array_t<idx_t> PyGraph::PyPartition(idx_t nparts) {
+py::array_t<idx_t> PyGraph::PyPartition(int nparts) {
   auto x = partition(nparts, true);
   return bind::vec(x);
 }
 
 py::list PyGraph::part_graph(int nparts, bool balance_edge) {
   auto parts = partition((idx_t)nparts, balance_edge);
+
+  // compute new index and offset for each node
+  std::vector<node_id> reindex(nNodes()), counting(nparts, 0), offset(nparts, 0);
+  for (size_t i = 0;i < nNodes(); i++) {
+    reindex[i] = counting[parts[i]];
+    counting[parts[i]]++;
+  }
+  for (int i = 1; i < nparts; i++) offset[i] = offset[i-1] + counting[i-1];
+  for (size_t i = 0;i < nNodes(); i++) reindex[i] += offset[parts[i]];
+  offset.push_back(nNodes());
+
+  // reindex edges
   std::vector<std::vector<node_id>> edges_u(nparts), edges_v(nparts);
-  std::vector<std::vector<node_id>> nodes(nparts);
   for (size_t i = 0; i < nEdges(); i++) {
     auto u = edge_index_u_[i], v = edge_index_v_[i];
     auto belong = parts[u];
-    edges_u[belong].emplace_back(u);
-    edges_v[belong].emplace_back(v);
+    edges_u[belong].emplace_back(reindex[u]);
+    edges_v[belong].emplace_back(reindex[v]);
   }
-  for (size_t i = 0; i < nNodes(); i++) {
-    auto belong = parts[i];
-    nodes[belong].emplace_back(i);
-  }
+
+  std::vector<std::vector<node_id>> nodes(nparts);
+  for (size_t i = 0; i < nNodes(); i++) nodes[parts[i]].emplace_back(i);
+
   py::list result;
   for (int i = 0; i < nparts; i++) {
-    auto tup = std::make_tuple(bind::vec(nodes[i]), bind::vec(edges_u[i]), bind::vec(edges_v[i]));
-    result.append(tup);
+    py::dict part_dict;
+    part_dict["offset"] = offset[i];
+    part_dict["orig_index"] = bind::vec(nodes[i]);
+    part_dict["edges"] = std::make_tuple(bind::vec(edges_u[i]), bind::vec(edges_v[i]));
+    result.append(part_dict);
   }
   return result;
 }

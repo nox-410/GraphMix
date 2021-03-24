@@ -20,19 +20,23 @@ def part_graph(dataset_name, nparts, output_path):
     float_feature = dataset.x.astype(np.float32)
     int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
     for i in range(nparts):
+        part_dict = partition[i]
         part_dir = os.path.join(output_path, "part{}".format(i))
         os.mkdir(part_dir)
-        edge_path = os.path.join(part_dir, "graph.npz")
-        data_path = os.path.join(part_dir, "data.npz")
-        index = partition[i][0]
+        edge_path = os.path.join(part_dir, "graph.npy")
+        float_feature_path = os.path.join(part_dir, "float_feature.npy")
+        int_feature_path = os.path.join(part_dir, "int_feature.npy")
         with open(edge_path, 'wb') as f:
-            np.savez(file=f, index=index, edge=np.vstack(partition[i][1:3]))
-        with open(data_path, 'wb') as f:
-            np.savez(file=f, f=float_feature[index], i=int_feature[index])
+            np.save(f, np.vstack(part_dict["edges"]))
+        with open(float_feature_path, 'wb') as f:
+            np.save(f, float_feature[part_dict["orig_index"]])
+        with open(int_feature_path, 'wb') as f:
+            np.save(f, int_feature[part_dict["orig_index"]])
     print("step3: save partitioned graph, time cost {:.3f}s".format(time.time()-start))
     part_meta = {
-        "nodes" : [len(g[0]) for g in partition],
-        "edges" : [len(g[1]) for g in partition],
+        "nodes" : [len(part_dict["orig_index"]) for part_dict in partition],
+        "edges" : [len(part_dict["edges"][0]) for part_dict in partition],
+        "offset" : [part_dict["offset"] for part_dict in partition],
     }
     meta = {
         "name": dataset_name,

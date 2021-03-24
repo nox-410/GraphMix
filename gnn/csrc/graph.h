@@ -1,5 +1,4 @@
-#ifndef GNN_GRAPH_H
-#define GNN_GRAPH_H
+#pragma once
 
 #include <metis.h>
 
@@ -10,9 +9,9 @@
 class PyGraph {
 private:
   size_t nnodes_;
-  SArray<long> edge_index_u_, edge_index_v_;
+  SArray<node_id> edge_index_u_, edge_index_v_;
 public:
-  PyGraph(SArray<long> edge_index_u, SArray<long> edge_index_v, size_t num_nodes);
+  PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes);
   ~PyGraph() {}
 
   //Getter
@@ -35,4 +34,3 @@ public:
 
 PyGraph makeGraph(py::array_t<long> edge_index, size_t num_nodes);
 
-#endif /* GNN_GRAPH_H */

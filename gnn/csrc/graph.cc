@@ -1,15 +1,15 @@
 #include "graph.h"
 
-PyGraph makeGraph(py::array_t<long> edge_index, size_t num_nodes) {
+PyGraph makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
   assert(edge_index.ndim() == 2 && edge_index.shape(0) == 2);
   size_t num_edges = edge_index.shape(1);
-  SArray<long> edge_index_u(num_edges), edge_index_v(num_edges);
-  memcpy(edge_index_u.data(), edge_index.data(), num_edges * sizeof(long));
-  memcpy(edge_index_v.data(), edge_index.data(1), num_edges * sizeof(long));
+  SArray<node_id> edge_index_u(num_edges), edge_index_v(num_edges);
+  memcpy(edge_index_u.data(), edge_index.data(), num_edges * sizeof(node_id));
+  memcpy(edge_index_v.data(), edge_index.data(1), num_edges * sizeof(node_id));
   return PyGraph(edge_index_u, edge_index_v, num_nodes);
 }
 
-PyGraph::PyGraph(SArray<long> edge_index_u, SArray<long> edge_index_v, size_t num_nodes) {
+PyGraph::PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes) {
   edge_index_u_ = edge_index_u;
   edge_index_v_ = edge_index_v;
   nnodes_ = num_nodes;
@@ -33,7 +33,7 @@ void PyGraph::addSelfLoop() {
 }
 
 void PyGraph::removeSelfLoop() {
-  SArray<long> u, v;
+  SArray<node_id> u, v;
   u.reserve(nEdges());
   v.reserve(nEdges());
   for (size_t i = 0;i < nEdges(); i++) {
@@ -66,12 +66,12 @@ py::array_t<float> PyGraph::gcnNorm(bool use_original_gcn_norm) {
     py::gil_scoped_release release;
     if (use_original_gcn_norm) {
       for (size_t i = 0;i < nEdges(); i++) {
-        long v = edge_index_v_[i], u = edge_index_u_[i];
+        node_id v = edge_index_v_[i], u = edge_index_u_[i];
         norm[i] = sqrt(1.0f / (deg[v] * deg[u]));
       }
     } else {
       for (size_t i = 0;i < nEdges(); i++) {
-        long v = edge_index_v_[i];
+        node_id v = edge_index_v_[i];
         norm[i] = 1.0f / deg[v];
       }
     }
@@ -93,7 +93,7 @@ std::vector<idx_t> PyGraph::partition(idx_t nparts, bool balance_edge) {
   }
   auto temp = indptr;
   for (size_t i = 0; i < nEdges(); i++) {
-    long u = edge_index_u_[i], v = edge_index_v_[i];
+    node_id u = edge_index_u_[i], v = edge_index_v_[i];
     indices[temp[u]] = v;
     temp[u]++;
   }
@@ -159,8 +159,8 @@ py::array_t<idx_t> PyGraph::PyPartition(idx_t nparts) {
 
 py::list PyGraph::part_graph(int nparts, bool balance_edge) {
   auto parts = partition((idx_t)nparts, balance_edge);
-  std::vector<std::vector<long>> edges_u(nparts), edges_v(nparts);
-  std::vector<std::vector<long>> nodes(nparts);
+  std::vector<std::vector<node_id>> edges_u(nparts), edges_v(nparts);
+  std::vector<std::vector<node_id>> nodes(nparts);
   for (size_t i = 0; i < nEdges(); i++) {
     auto u = edge_index_u_[i], v = edge_index_v_[i];
     auto belong = parts[u];

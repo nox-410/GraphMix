@@ -3,6 +3,7 @@
  */
 #include "ps/internal/customer.h"
 #include "ps/internal/postoffice.h"
+
 namespace ps {
 
 const int Node::kEmpty = std::numeric_limits<int>::max();

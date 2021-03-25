@@ -5,7 +5,7 @@
 #include "common/binding.h"
 #include "common/MPMCQueue.h"
 
-#include <thread>
+#include "graph/sampler.h"
 
 namespace ps {
 
@@ -25,6 +25,7 @@ private:
   node_id num_local_nodes_;
   node_id local_offset_;
   rigtorp::mpmc::Queue<GraphMiniBatch> graph_queue_;
+  std::vector<SamplerPTR> samplers_;
 };
 
 } // namespace ps

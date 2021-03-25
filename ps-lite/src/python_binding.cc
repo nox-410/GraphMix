@@ -1,9 +1,10 @@
 #include "ps/worker/worker.h"
-#include "ps/server/kvserver.h"
+#include "ps/kvserver.h"
+#include "graph/graph_handle.h"
 #include "common/binding.h"
 
 void StartServer() {
-  auto server = new KVServer(0);
+  auto server = new KVServer(0, GraphHandle());
   Postoffice::Get()->RegisterExitCallback([server]() { delete server; });
 }
 

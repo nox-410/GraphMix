@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PSFunc.h"
-#include "common/graph_type.h"
+#include "graph/graph_type.h"
 
 namespace ps {
 

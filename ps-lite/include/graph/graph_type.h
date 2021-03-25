@@ -14,3 +14,16 @@ struct NodeData {
 };
 
 typedef std::unordered_map<node_id, NodeData> NodePack;
+
+struct GraphMiniBatch {
+    SArray<graph_float> f_feat;
+    SArray<graph_int> i_feat;
+    SArray<node_id> coo_u, coo_v;
+};
+
+struct GraphMetaData {
+    int my_rank;
+    size_t f_len, i_len;
+    size_t num_nodes;
+    std::vector<size_t> offset;
+};

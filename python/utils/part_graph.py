@@ -19,6 +19,8 @@ def part_graph(dataset_name, nparts, output_path):
     start = time.time()
     float_feature = dataset.x.astype(np.float32)
     int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
+    if args.nodeid:
+        int_feature = np.concatenate([int_feature, np.arange(dataset.graph.num_nodes).reshape(-1, 1)], axis=1)
     for i in range(nparts):
         part_dict = partition[i]
         part_dir = os.path.join(output_path, "part{}".format(i))
@@ -57,6 +59,7 @@ if __name__ =='__main__':
     parser.add_argument("--dataset", "-d", required=True)
     parser.add_argument("--nparts", "-n", required=True)
     parser.add_argument("--path", "-p", required=True)
+    parser.add_argument("--nodeid", action="store_true")
     args = parser.parse_args()
     output_path = str(args.path)
     nparts = int(args.nparts)

@@ -54,13 +54,14 @@ class OGBDataset():
 def load_dataset(name):
     root = dataset_root + name
     if name=="Cora" or name=="PubMed":
-        return PlanetoidDataset(root, name)
+        dataset = PlanetoidDataset(root, name)
     elif name=="Reddit":
-        return RedditDataset(root)
+        dataset = RedditDataset(root)
     elif name=="ogbn-products" or name=="ogbn-papers100M":
-        return OGBDataset(root, name)
+        dataset = OGBDataset(root, name)
     else:
         raise NotImplementedError
+    return dataset
 
 def load_sparse_dataset(name):
     root = dataset_root + name

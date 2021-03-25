@@ -19,7 +19,7 @@ public:
 private:
   std::vector<NodeData> nodes_;
   GraphMetaData meta_;
-  size_t num_local_nodes_;
+  node_id num_local_nodes_;
   node_id local_offset_;
 };
 

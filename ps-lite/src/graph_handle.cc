@@ -49,11 +49,11 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   PYTHON_CHECK_ARRAY(f_feat);
   PYTHON_CHECK_ARRAY(i_feat);
   PYTHON_CHECK_ARRAY(edges);
-  CHECK(f_feat.ndim() == 2 && f_feat.shape(0) == num_local_nodes_ && f_feat.shape(1) == meta_.f_len);
-  CHECK(i_feat.ndim() == 2 && i_feat.shape(0) == num_local_nodes_ && i_feat.shape(1) == meta_.i_len);
+  CHECK(f_feat.ndim() == 2 && f_feat.shape(0) == num_local_nodes_ && (size_t)f_feat.shape(1) == meta_.f_len);
+  CHECK(i_feat.ndim() == 2 && i_feat.shape(0) == num_local_nodes_ && (size_t)i_feat.shape(1) == meta_.i_len);
   CHECK(edges.ndim() == 2 && edges.shape(0) == 2);
   size_t nedges = edges.shape(1);
-  for (size_t i = 0 ; i < num_local_nodes_; i++) {
+  for (node_id i = 0 ; i < num_local_nodes_; i++) {
     NodeData node;
     node.i_feat.CopyFrom(i_feat.data(i, 0), meta_.i_len);
     node.f_feat.CopyFrom(f_feat.data(i, 0), meta_.f_len);

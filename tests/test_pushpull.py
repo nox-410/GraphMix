@@ -6,9 +6,8 @@ import DistGNN
 
 def test(args):
     rank = DistGNN._PS.rank()
-    nrank = DistGNN._PS.nrank()
+    nrank = DistGNN._PS.num_worker()
     shard = DistGNN.distributed.Shard(args.path, rank)
-    shard.upload()
     comm = DistGNN._PS.get_handle()
     pack = DistGNN._C.NodePack()
     task = comm.pull(shard.index, pack)

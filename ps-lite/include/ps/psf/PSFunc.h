@@ -12,8 +12,6 @@ using std::function;
 namespace ps {
 
 enum PsfType {
-  /* Dense ops */
-  NodePush,
   NodePull,
   kNumPSfunction
 };

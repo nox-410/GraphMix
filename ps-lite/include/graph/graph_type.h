@@ -22,8 +22,8 @@ struct GraphMiniBatch {
 };
 
 struct GraphMetaData {
-    int my_rank;
+    int rank, nrank;
     size_t f_len, i_len;
     size_t num_nodes;
-    std::vector<size_t> offset;
+    std::vector<node_id> offset;
 };

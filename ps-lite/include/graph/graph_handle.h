@@ -3,7 +3,7 @@
 #include "ps/psf/PSFunc.h"
 #include "graph/graph_type.h"
 
-#include "common/thread_safe_hash_map.h"
+#include "common/binding.h"
 
 namespace ps {
 
@@ -13,16 +13,14 @@ public:
   GraphHandle(const GraphHandle& handle) {}
 
   void serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response);
-  void serve(const PSFData<NodePush>::Request &request, PSFData<NodePush>::Response &response);
-
+  static void initBinding(py::module &m);
+  void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset);
+  void initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);
 private:
-  std::vector<NodeData> nodes;
-  GraphMetaData data;
-
-  typedef threadsafe_unordered_map<node_id, NodeData> tmap;
-  tmap store;
-  size_t i_len, f_len;
-  const tmap& const_store = store; // const reference to force compiler to use read lock
+  std::vector<NodeData> nodes_;
+  GraphMetaData meta_;
+  size_t num_local_nodes_;
+  node_id local_offset_;
 };
 
 } // namespace ps

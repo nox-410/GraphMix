@@ -17,15 +17,4 @@ template<> struct PSFData<NodePull> {
   >;
 };
 
-template<> struct PSFData<NodePush> {
-  using Request = tuple<
-    node_id, // key
-    SArray<graph_float>,
-    SArray<graph_int>,
-    SArray<node_id>
-  >;
-  using Response = tuple<>;
-  static void _callback(const Response &response) {}
-};
-
 } // namespace ps

@@ -10,13 +10,13 @@ public:
   static Worker& Get();
   // for data push&pull
   typedef uint64_t query_t;
-  query_t pushData(py::array_t<node_id> indices, py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);
   query_t pullData(py::array_t<node_id> indices, NodePack &nodes);
   /*
     wait_data waits until a query success
   */
   void waitData(query_t query);
   static void initBinding(py::module &m);
+  void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server);
 
 private:
   Worker();
@@ -29,4 +29,6 @@ private:
   // protect query2timestamp and next_query
   std::mutex data_mu;
   KVWorker _kvworker;
+  GraphMetaData meta_;
+  int getserver(node_id idx);
 };

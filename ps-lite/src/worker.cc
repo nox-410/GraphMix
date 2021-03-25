@@ -1,50 +1,12 @@
 #include "ps/worker/worker.h"
 
-inline static int getserver(node_id idx) {
-  return idx % Postoffice::Get()->num_servers();
+int Worker::getserver(node_id idx) {
+  int server = 0;
+  while (idx >= meta_.offset[server + 1]) server++;
+  return server;
 }
 
 Worker::Worker() : _kvworker(0, 0) {}
-
-Worker::query_t
-Worker::pushData(py::array_t<node_id> indices, py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges) {
-  PYTHON_CHECK_ARRAY(f_feat);
-  PYTHON_CHECK_ARRAY(i_feat);
-  PYTHON_CHECK_ARRAY(edges);
-  size_t nnodes = indices.size();
-  assert(f_feat.ndim() == 2 && f_feat.shape(0) == nnodes);
-  assert(i_feat.ndim() == 2 && i_feat.shape(0) == nnodes);
-  assert(edges.ndim() == 2 && edges.shape(0) == 2);
-  size_t f_len = f_feat.shape(1), i_len = i_feat.shape(1);
-  size_t nedges = edges.shape(1);
-
-  data_mu.lock();
-  query_t cur_query = next_query++;
-  auto& timestamps = query2timestamp[cur_query];
-  data_mu.unlock();
-
-  auto nodes = NodePack();
-  for (size_t i = 0 ; i < nnodes; i++) {
-    NodeData node;
-    node.i_feat = SArray<graph_int>(i_feat.mutable_data(i, 0), i_len);
-    node.f_feat = SArray<graph_float>(f_feat.mutable_data(i, 0), f_len);
-    nodes.emplace(indices.at(i), node);
-  }
-  std::unordered_map<node_id, size_t> deg;
-  for (size_t i = 0 ; i < nedges; i++) deg[edges.at(0, i)]++;
-  for (auto &node : nodes) node.second.edge.reserve(deg[node.first]);
-  for (size_t i = 0; i < nedges; i++) {
-    node_id u = edges.at(0, i), v = edges.at(1, i);
-    nodes[u].edge.push_back(v);
-  }
-  auto cb = getCallBack<NodePush>();
-  for (auto &node : nodes) {
-    PSFData<NodePush>::Request request(node.first, node.second.f_feat, node.second.i_feat, node.second.edge);
-    int ts = _kvworker.Request<NodePush>(request, cb, getserver(node.first));
-    timestamps.push_back(ts);
-  }
-  return cur_query;
-}
 
 Worker::query_t
 Worker::pullData(py::array_t<node_id> indices, NodePack &nodes) {
@@ -110,11 +72,23 @@ void Worker::waitData(query_t query) {
   }
 }
 
+void Worker::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
+  PYTHON_CHECK_ARRAY(offset);
+  meta_.f_len = f_len;
+  meta_.i_len = i_len;
+  meta_.rank = target_server;
+  meta_.nrank = Postoffice::Get()->num_servers();
+  meta_.offset = std::vector<node_id>(meta_.nrank + 1);
+  assert(offset.size() == meta_.nrank + 1);
+  for (int i = 0; i < meta_.nrank + 1; i++)
+    meta_.offset[i] = offset.at(i);
+}
+
 void Worker::initBinding(py::module& m) {
   py::class_<Worker>(m, "graph worker")
-    .def("push", &Worker::pushData)
     .def("pull", &Worker::pullData)
-    .def("wait", &Worker::waitData);
+    .def("wait", &Worker::waitData)
+    .def("init_meta", &Worker::initMeta);
   m.def("get_handle", Worker::Get, py::return_value_policy::reference);
 }
 

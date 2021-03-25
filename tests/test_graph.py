@@ -9,9 +9,8 @@ max_thread = 5
 
 def test(args):
     rank = DistGNN._PS.rank()
-    nrank = DistGNN._PS.nrank()
+    nrank = DistGNN._PS.num_worker()
     shard = DistGNN.distributed.Shard(args.path, rank)
-    shard.upload()
     if rank != 0:
         return
     comm = DistGNN._PS.get_handle()

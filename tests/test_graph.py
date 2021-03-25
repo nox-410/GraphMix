@@ -10,15 +10,14 @@ max_thread = 5
 def test(args):
     rank = DistGNN._PS.rank()
     nrank = DistGNN._PS.num_worker()
-    shard = DistGNN.distributed.Shard(args.path, rank)
     if rank != 0:
         return
-    comm = DistGNN._PS.get_handle()
+    comm = DistGNN._PS.get_client()
     t = ThreadPoolExecutor(max_workers=max_thread)
-    indices = np.arange(shard.meta["node"])
     item_count = 0
     def pull_data():
         while True:
+            indices = np.random.randint(0, args.meta["node"], 1000)
             pack = DistGNN._C.NodePack()
             query = comm.pull(indices, pack)
             comm.wait(query)
@@ -41,6 +40,5 @@ def test(args):
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
-    parser.add_argument("--path", "-p", required=True)
     args = parser.parse_args()
     DistGNN.launcher(test, args)

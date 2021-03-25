@@ -1,5 +1,5 @@
-#include "ps/worker/worker.h"
 #include "ps/kvserver.h"
+#include "graph/graph_client.h"
 #include "graph/graph_handle.h"
 #include "common/binding.h"
 
@@ -28,6 +28,6 @@ PYBIND11_MODULE(libc_PS, m) {
 
   m.def("start_server", StartServer, py::return_value_policy::reference);
 
-  Worker::initBinding(m);
+  GraphClient::initBinding(m);
   GraphHandle::initBinding(m);
 } // PYBIND11_MODULE

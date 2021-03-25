@@ -25,7 +25,9 @@ def start_worker(func, args, num_local_worker, graph_data_path):
     local_rank = _PS.rank() % num_local_worker
     target_server = _PS.rank() // num_local_worker
     args.local_rank = local_rank
-    Shard(graph_data_path, -1).init_worker(target_server)
+    shard = Shard(graph_data_path, -1)
+    shard.init_worker(target_server)
+    args.meta = shard.meta
     _PS.barrier_all()
     func(args)
     _PS.finalize()

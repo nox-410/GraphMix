@@ -5,9 +5,9 @@
 
 using namespace ps;
 
-class Worker {
+class GraphClient {
 public:
-  static Worker& Get();
+  static GraphClient& Get();
   // for data push&pull
   typedef uint64_t query_t;
   query_t pullData(py::array_t<node_id> indices, NodePack &nodes);
@@ -19,7 +19,7 @@ public:
   void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server);
 
 private:
-  Worker();
+  GraphClient();
   query_t pullData_impl(const node_id* indices, size_t n, NodePack &nodes);
   void waitTimestamp(int timestamp) { _kvworker.Wait(timestamp); }
   // used this hold to thread_pool return object

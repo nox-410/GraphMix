@@ -37,7 +37,7 @@ class Shard():
         return handler
 
     def init_worker(self, target_server):
-        handler = _PS.get_handle()
+        handler = _PS.get_client()
         offset = self.meta["partition"]["offset"]
         offset.append(self.meta["node"])
         handler.init_meta(self.meta["float_feature"], self.meta["int_feature"], offset, target_server)

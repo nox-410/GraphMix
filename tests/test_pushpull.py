@@ -7,7 +7,7 @@ import DistGNN
 def test(args):
     rank = DistGNN._PS.rank()
     nrank = DistGNN._PS.num_worker()
-    comm = DistGNN._PS.get_handle()
+    comm = DistGNN._PS.get_client()
     pack = DistGNN._C.NodePack()
     dataset = DistGNN.dataset.load_dataset("Cora")
     num_nodes = dataset.graph.num_nodes

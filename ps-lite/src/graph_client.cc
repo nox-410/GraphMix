@@ -1,21 +1,21 @@
-#include "ps/worker/worker.h"
+#include "graph/graph_client.h"
 
-int Worker::getserver(node_id idx) {
+int GraphClient::getserver(node_id idx) {
   int server = 0;
   while (idx >= meta_.offset[server + 1]) server++;
   return server;
 }
 
-Worker::Worker() : _kvworker(0, 0) {}
+GraphClient::GraphClient() : _kvworker(0, 0) {}
 
-Worker::query_t
-Worker::pullData(py::array_t<node_id> indices, NodePack &nodes) {
+GraphClient::query_t
+GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {
   PYTHON_CHECK_ARRAY(indices);
   return pullData_impl(indices.data(), indices.size(), nodes);
 }
 
-Worker::query_t
-Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
+GraphClient::query_t
+GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
@@ -54,7 +54,7 @@ Worker::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
 /*
     wait_data waits until a query success
 */
-void Worker::waitData(query_t query) {
+void GraphClient::waitData(query_t query) {
   py::gil_scoped_release release;
   data_mu.lock();
   auto iter = query2timestamp.find(query);
@@ -72,7 +72,7 @@ void Worker::waitData(query_t query) {
   }
 }
 
-void Worker::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
+void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
   PYTHON_CHECK_ARRAY(offset);
   meta_.f_len = f_len;
   meta_.i_len = i_len;
@@ -84,15 +84,15 @@ void Worker::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, i
     meta_.offset[i] = offset.at(i);
 }
 
-void Worker::initBinding(py::module& m) {
-  py::class_<Worker>(m, "graph worker")
-    .def("pull", &Worker::pullData)
-    .def("wait", &Worker::waitData)
-    .def("init_meta", &Worker::initMeta);
-  m.def("get_handle", Worker::Get, py::return_value_policy::reference);
+void GraphClient::initBinding(py::module& m) {
+  py::class_<GraphClient>(m, "graph client")
+    .def("pull", &GraphClient::pullData)
+    .def("wait", &GraphClient::waitData)
+    .def("init_meta", &GraphClient::initMeta);
+  m.def("get_client", GraphClient::Get, py::return_value_policy::reference);
 }
 
-Worker& Worker::Get() {
-  static Worker w;
+GraphClient& GraphClient::Get() {
+  static GraphClient w;
   return w;
 }

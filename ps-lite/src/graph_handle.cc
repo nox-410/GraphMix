@@ -30,8 +30,9 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
   get<3>(response) = offset;
 }
 
-void serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
-  // TODO
+void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
+  GraphMiniBatch result;
+  graph_queue_.pop(result);
 }
 
 void GraphHandle::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset) {

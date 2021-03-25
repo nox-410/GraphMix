@@ -13,6 +13,7 @@ public:
   GraphHandle(const GraphHandle& handle) {}
 
   void serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response);
+  void serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response);
   static void initBinding(py::module &m);
   void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset);
   void initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);

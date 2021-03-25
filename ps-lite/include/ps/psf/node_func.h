@@ -17,4 +17,13 @@ template<> struct PSFData<NodePull> {
   >;
 };
 
+template<> struct PSFData<GraphPull> {
+  using Request = tuple<>;
+  using Response = tuple<
+    SArray<graph_float>,
+    SArray<graph_int>,
+    SArray<node_id>
+  >;
+};
+
 } // namespace ps

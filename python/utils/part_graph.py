@@ -4,7 +4,7 @@ import numpy as np
 import time
 import yaml
 
-from DistGNN.dataset import load_dataset
+from graphmix.dataset import load_dataset
 
 def part_graph(dataset_name, nparts, output_path):
     if os.path.exists(output_path):

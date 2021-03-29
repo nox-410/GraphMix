@@ -3,22 +3,22 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
-import DistGNN
+import graphmix
 
 max_thread = 5
 
 def test(args):
-    rank = DistGNN._PS.rank()
-    nrank = DistGNN._PS.num_worker()
+    rank = graphmix._PS.rank()
+    nrank = graphmix._PS.num_worker()
     if rank != 0:
         return
-    comm = DistGNN._PS.get_client()
+    comm = graphmix._PS.get_client()
     t = ThreadPoolExecutor(max_workers=max_thread)
     item_count = 0
     def pull_data():
         while True:
             indices = np.random.randint(0, args.meta["node"], 1000)
-            pack = DistGNN._C.NodePack()
+            pack = graphmix._C.NodePack()
             query = comm.pull(indices, pack)
             comm.wait(query)
             nonlocal item_count
@@ -41,4 +41,4 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     args = parser.parse_args()
-    DistGNN.launcher(test, args)
+    graphmix.launcher(test, args)

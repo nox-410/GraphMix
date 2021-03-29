@@ -4,7 +4,7 @@ import signal
 import yaml
 import multiprocessing
 
-from DistGNN.distributed import Shard
+from graphmix.distributed import Shard
 
 def start_server(graph_data_path):
     os.environ['DMLC_ROLE'] = "server"

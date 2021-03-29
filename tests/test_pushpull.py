@@ -1,15 +1,15 @@
 import numpy as np
 import argparse
 
-import DistGNN
+import graphmix
 
 
 def test(args):
-    rank = DistGNN._PS.rank()
-    nrank = DistGNN._PS.num_worker()
-    comm = DistGNN._PS.get_client()
-    pack = DistGNN._C.NodePack()
-    dataset = DistGNN.dataset.load_dataset("Cora")
+    rank = graphmix._PS.rank()
+    nrank = graphmix._PS.num_worker()
+    comm = graphmix._PS.get_client()
+    pack = graphmix._C.NodePack()
+    dataset = graphmix.dataset.load_dataset("Cora")
     num_nodes = dataset.graph.num_nodes
     task = comm.pull(np.arange(num_nodes), pack)
     comm.wait(task)
@@ -29,4 +29,4 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     args = parser.parse_args()
-    DistGNN.launcher(test, args)
+    graphmix.launcher(test, args)

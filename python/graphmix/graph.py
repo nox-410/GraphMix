@@ -3,9 +3,6 @@ import numpy as np
 import libc_graphmix as _C
 from libc_graphmix import Graph
 
-def get_lib():
-    return _C
-
 def shuffle(graph):
     perm = np.random.permutation(graph.num_nodes)
     rperm = np.argsort(perm) # reversed permutation

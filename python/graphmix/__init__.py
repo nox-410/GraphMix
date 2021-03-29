@@ -8,6 +8,5 @@ __handle_import()
 import libc_graphmix as _C
 from . import dataset
 from . import graph
-from . import layer
-from . import distributed
+from . import nn
 from .launcher import launcher

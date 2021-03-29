@@ -1,7 +1,7 @@
 import numpy as np
 
-import libc_GNN as _C
-from libc_GNN import Graph
+import libc_graphmix as _C
+from libc_graphmix import Graph
 
 def get_lib():
     return _C

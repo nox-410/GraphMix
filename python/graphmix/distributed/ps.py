@@ -2,7 +2,7 @@ import os
 import ctypes
 import numpy as np
 import threading
-import libc_PS as _PS
+import libc_graphmix as _PS
 
 class PS:
     rank = None

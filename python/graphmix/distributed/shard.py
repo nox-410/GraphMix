@@ -1,4 +1,4 @@
-import libc_PS as _PS
+import libc_graphmix as _PS
 
 import numpy as np
 import os, yaml

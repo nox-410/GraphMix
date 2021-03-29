@@ -5,9 +5,9 @@ import graphmix
 
 
 def test(args):
-    rank = graphmix._PS.rank()
-    nrank = graphmix._PS.num_worker()
-    comm = graphmix._PS.get_client()
+    rank = graphmix._C.rank()
+    nrank = graphmix._C.num_worker()
+    comm = graphmix._C.get_client()
     pack = graphmix._C.NodePack()
     dataset = graphmix.dataset.load_dataset("Cora")
     num_nodes = dataset.graph.num_nodes

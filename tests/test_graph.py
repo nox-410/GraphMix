@@ -8,11 +8,11 @@ import graphmix
 max_thread = 5
 
 def test(args):
-    rank = graphmix._PS.rank()
-    nrank = graphmix._PS.num_worker()
+    rank = graphmix._C.rank()
+    nrank = graphmix._C.num_worker()
     if rank != 0:
         return
-    comm = graphmix._PS.get_client()
+    comm = graphmix._C.get_client()
     t = ThreadPoolExecutor(max_workers=max_thread)
     item_count = 0
     def pull_data():

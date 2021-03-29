@@ -1,4 +1,4 @@
-#include "graph.h"
+#include "graph/graph.h"
 
 PyGraph makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
   assert(edge_index.ndim() == 2 && edge_index.shape(0) == 2);

@@ -1,12 +1,10 @@
-# port from https://github.com/dmlc/ps-lite/blob/master/CMakeLists.txt
-
-aux_source_directory(src PS_SRC)
+aux_source_directory(src GRAPHMIX_SRC)
 find_package(pybind11 CONFIG)
 if (NOT pybind11_FOUND)
     message(FATAL "pybind11 not found")
 else()
-    pybind11_add_module(libc_PS ${PS_SRC})
-    target_include_directories(libc_PS PUBLIC include)
+    pybind11_add_module(libc_graphmix ${GRAPHMIX_SRC})
+    target_include_directories(libc_graphmix PUBLIC include)
 endif()
 
 # find and build zeroMQ
@@ -24,11 +22,14 @@ if(NOT ZMQ_FOUND)
         endif()
         add_subdirectory(${zmq_SOURCE_DIR} ${zmq_BINARY_DIR})
     endif()
-    target_link_libraries(libc_PS PRIVATE libzmq-static)
+    target_link_libraries(libc_graphmix PRIVATE libzmq-static)
 else()
-    target_include_directories(libc_PS PRIVATE ${ZMQ_INCLUDE_DIRS})
-    target_link_libraries(libc_PS PRIVATE ${ZMQ_LIBRARIES})
+    target_include_directories(libc_graphmix PRIVATE ${ZMQ_INCLUDE_DIRS})
+    target_link_libraries(libc_graphmix PRIVATE ${ZMQ_LIBRARIES})
 endif()
+
+# find METIS
+find_package(METIS)
 
 # find and build protobuf
 find_package(Protobuf)
@@ -39,8 +40,9 @@ endif()
 set(PROTOBUF_GENERATE_CPP_APPEND_PATH TRUE)
 file(GLOB_RECURSE PROTO_FILES "proto/*.proto")
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
-target_sources(libc_PS PRIVATE ${PROTO_SRCS})
-target_include_directories(libc_PS PRIVATE ${CMAKE_CURRENT_BINARY_DIR})  # PROTO_HDRS files are here
-target_include_directories(libc_PS PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_include_directories(libc_PS PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(libc_PS PRIVATE ${PROTOBUF_LIBRARY})
+target_sources(libc_graphmix PRIVATE ${PROTO_SRCS})
+target_include_directories(libc_graphmix PRIVATE ${CMAKE_CURRENT_BINARY_DIR})  # PROTO_HDRS files are here
+target_include_directories(libc_graphmix PRIVATE ${PROTOBUF_INCLUDE_DIR})
+target_include_directories(libc_graphmix PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(libc_graphmix PRIVATE ${PROTOBUF_LIBRARY})
+target_link_libraries(libc_graphmix PUBLIC ${METIS_LIBRARIES})

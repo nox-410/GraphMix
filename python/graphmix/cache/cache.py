@@ -1,4 +1,4 @@
-import libc_GNN as _C
+import libc_graphmix as _C
 
 import threading
 import queue

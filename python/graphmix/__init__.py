@@ -5,8 +5,7 @@ def __handle_import():
     lib_path = os.path.join(cur_path, '../../build/lib/')
     sys.path.append(lib_path)
 __handle_import()
-import libc_PS as _PS
-import libc_GNN as _C
+import libc_graphmix as _C
 from . import dataset
 from . import graph
 from . import layer

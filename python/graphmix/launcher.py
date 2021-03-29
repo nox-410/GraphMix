@@ -1,4 +1,4 @@
-import libc_PS as _PS
+import libc_graphmix as _C
 import os
 import signal
 import yaml
@@ -8,29 +8,29 @@ from graphmix.distributed import Shard
 
 def start_server(graph_data_path):
     os.environ['DMLC_ROLE'] = "server"
-    _PS.init()
-    rank = _PS.rank()
+    _C.init()
+    rank = _C.rank()
     Shard(graph_data_path, rank).create_server()
-    _PS.barrier_all()
-    _PS.finalize()
+    _C.barrier_all()
+    _C.finalize()
 
 def start_scheduler():
     os.environ['DMLC_ROLE'] = "scheduler"
-    _PS.init()
-    _PS.finalize()
+    _C.init()
+    _C.finalize()
 
 def start_worker(func, args, num_local_worker, graph_data_path):
     os.environ['DMLC_ROLE'] = "worker"
-    _PS.init()
-    local_rank = _PS.rank() % num_local_worker
-    target_server = _PS.rank() // num_local_worker
+    _C.init()
+    local_rank = _C.rank() % num_local_worker
+    target_server = _C.rank() // num_local_worker
     args.local_rank = local_rank
     shard = Shard(graph_data_path, -1)
     shard.init_worker(target_server)
     args.meta = shard.meta
-    _PS.barrier_all()
+    _C.barrier_all()
     func(args)
-    _PS.finalize()
+    _C.finalize()
 
 def signal_handler(signal, frame):
     print("SIGINT signal caught, stop Training")

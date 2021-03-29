@@ -18,5 +18,4 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 include(FetchContent) # download third_party
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/ps-lite)
-add_subdirectory(${CMAKE_SOURCE_DIR}/gnn)
+add_subdirectory(${CMAKE_SOURCE_DIR}/graphmix)

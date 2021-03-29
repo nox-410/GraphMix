@@ -4,8 +4,7 @@ from ..cache import Cache
 import numpy as np
 import time
 
-import libc_GNN as _C
-import libc_PS as _PS
+import libc_graphmix as _C
 
 class DistributedSubgraphSampler(Sampler):
     def __init__(self, path, num, length, rank, nrank, num_sample_thread=1,
@@ -25,8 +24,8 @@ class DistributedSubgraphSampler(Sampler):
         self.data_download = ps_download
         self.data_upload = ps_upload
         # when init, upload its local shard of graph into the ps
-        _PS.push()
-        _PS.barrier()
+        _C.push()
+        _C.barrier()
 
     def _sample(self):
         #initiate random_walk heads within local subgraph
@@ -107,7 +106,7 @@ class DistributedGraphSageSampler(Sampler):
             self.graph.x, self.graph.y,
             self._internal.indptr, self._internal.indices, self._internal.nodes_from
         )
-        _PS.barrier()
+        _C.barrier()
 
     def _sample_multiple_local(self, local_heads_id):
         nids, nfroms = [], []

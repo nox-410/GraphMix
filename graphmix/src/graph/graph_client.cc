@@ -16,12 +16,14 @@ GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {
 
 GraphClient::query_t
 GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
+  py::gil_scoped_release release;
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
   data_mu.unlock();
   int nserver = Postoffice::Get()->num_servers();
   std::vector<SArray<node_id>> keys(nserver);
+  nodes.reserve(n);
   for (size_t i = 0; i < n; i++) {
     keys[getserver(indices[i])].push_back(indices[i]);
     nodes[indices[i]] = NodeData(); // avoid race condition in callback

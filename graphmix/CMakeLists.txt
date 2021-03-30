@@ -1,9 +1,10 @@
 aux_source_directory(src GRAPHMIX_SRC)
+aux_source_directory(src/graph GRAPHMIX_GRAPH_SRC)
 find_package(pybind11 CONFIG)
 if (NOT pybind11_FOUND)
     message(FATAL "pybind11 not found")
 else()
-    pybind11_add_module(libc_graphmix ${GRAPHMIX_SRC})
+    pybind11_add_module(libc_graphmix ${GRAPHMIX_SRC} ${GRAPHMIX_GRAPH_SRC})
     target_include_directories(libc_graphmix PUBLIC include)
 endif()
 

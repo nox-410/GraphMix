@@ -6,6 +6,26 @@ import multiprocessing
 
 from .shard import Shard
 
+envvar = [
+"PS_HEARTBEAT_TIMEOUT",
+"PS_HEARTBEAT_INTERVAL",
+"PS_RESEND",
+"PS_VERBOSE",
+"PS_WORKER_THREAD",
+"PS_SERVER_THREAD",
+"PS_DROP_MSG",
+"DMLC_PS_VAN_TYPE",
+"DMLC_NUM_WORKER",
+"DMLC_ROLE",
+"DMLC_PS_ROOT_URI",
+"DMLC_PS_ROOT_PORT",
+"DMLC_NODE_HOST",
+"DMLC_INTERFACE",
+"DMLC_LOCAL",
+"DMLC_USE_KUBERNETES",
+"DMLC_PS_WATER_MARK",
+]
+
 def start_server(graph_data_path):
     os.environ['DMLC_ROLE'] = "server"
     _C.init()

@@ -11,25 +11,14 @@ namespace ps {
 
 class EmptyHandler {};
 
-// Recursively register receive message handler (from 0 to kNumPSfunction)
-template<PsfType ftype, typename app>
-struct KVAppRegisterHelper {
-  static void init(app* ptr) {
-    if constexpr (ftype != kNumPSfunction) {
-      ptr->message_handlers[ftype] = std::bind(&app::template onReceive<ftype>, ptr, std::placeholders::_1);
-      KVAppRegisterHelper<PsfType(ftype+1), app>::init(ptr);
-    }
-  }
-};
-
 template<class Handler>
 class KVApp {
 public:
   explicit KVApp(int app_id, Handler handler) {
-    KVAppRegisterHelper<PsfType(0), KVApp>::init(this);
+    _init_message_handlers<PsfType(0)>();
     obj_.reset(new Customer(
       app_id, app_id,
-      std::bind(&KVApp::Process, this, std::placeholders::_1)
+      std::bind(&KVApp::_process, this, std::placeholders::_1)
     ));
   }
   void Wait(int timestamp) { obj_->WaitRequest(timestamp); }
@@ -77,14 +66,23 @@ private:
       CallbackStore<ftype>::Get()->run(timestamp, response);
     }
   }
-  void Process(const Message &msg) {
+
+  void _process(const Message &msg) {
     CHECK_LT(msg.meta.psftype, kNumPSfunction) << "Unknown PS Function Received";
-    message_handlers[msg.meta.psftype](msg);
+    _message_handlers[msg.meta.psftype](msg);
+  }
+
+  // Recursively register receive message handler (from 0 to kNumPSfunction)
+  template<PsfType ftype>
+  void _init_message_handlers() {
+    if constexpr (ftype != kNumPSfunction) {
+      _message_handlers[ftype] = std::bind(&KVApp::template onReceive<ftype>, this, std::placeholders::_1);
+      _init_message_handlers<PsfType(ftype+1)>();
+    }
   }
 
   typedef std::function<void(const Message&)> MessageHandle;
-  MessageHandle message_handlers[kNumPSfunction];
-  template<PsfType, typename> friend struct KVAppRegisterHelper;
+  MessageHandle _message_handlers[kNumPSfunction];
 };
 
 } // namespace ps

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ps/worker/kvworker.h"
+#include "ps/kvapp.h"
 #include "common/binding.h"
 
 using namespace ps;
@@ -28,7 +28,7 @@ private:
   query_t next_query = 0;
   // protect query2timestamp and next_query
   std::mutex data_mu;
-  KVWorker _kvworker;
+  KVApp<EmptyHandler> _kvworker;
   GraphMetaData meta_;
   int getserver(node_id idx);
 };

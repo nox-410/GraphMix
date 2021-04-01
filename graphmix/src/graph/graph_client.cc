@@ -6,7 +6,7 @@ int GraphClient::getserver(node_id idx) {
   return server;
 }
 
-GraphClient::GraphClient() : _kvworker(0, 0) {}
+GraphClient::GraphClient() : _kvworker(0, EmptyHandler()) {}
 
 GraphClient::query_t
 GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {

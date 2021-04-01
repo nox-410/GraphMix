@@ -1,4 +1,4 @@
-#include "ps/kvserver.h"
+#include "ps/kvapp.h"
 #include "graph/graph_client.h"
 #include "graph/graph_handle.h"
 #include "common/binding.h"
@@ -9,7 +9,7 @@
 PYBIND11_MAKE_OPAQUE(NodePack);
 
 GraphHandle& StartServer() {
-  auto server = new KVServer(0, GraphHandle());
+  auto server = new KVApp(0, GraphHandle());
   Postoffice::Get()->RegisterExitCallback([server]() { delete server; });
   return server->handler;
 }

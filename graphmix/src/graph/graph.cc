@@ -1,12 +1,12 @@
 #include "graph/graph.h"
 
-PyGraph makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
+std::shared_ptr<PyGraph> makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
   assert(edge_index.ndim() == 2 && edge_index.shape(0) == 2);
   size_t num_edges = edge_index.shape(1);
   SArray<node_id> edge_index_u(num_edges), edge_index_v(num_edges);
   memcpy(edge_index_u.data(), edge_index.data(), num_edges * sizeof(node_id));
   memcpy(edge_index_v.data(), edge_index.data(1), num_edges * sizeof(node_id));
-  return PyGraph(edge_index_u, edge_index_v, num_nodes);
+  return std::make_shared<PyGraph>(edge_index_u, edge_index_v, num_nodes);
 }
 
 PyGraph::PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes) {

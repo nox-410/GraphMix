@@ -32,5 +32,4 @@ public:
   py::array_t<idx_t> PyPartition(idx_t nparts);
 };
 
-PyGraph makeGraph(py::array_t<long> edge_index, size_t num_nodes);
-
+std::shared_ptr<PyGraph> makeGraph(py::array_t<long> edge_index, size_t num_nodes);

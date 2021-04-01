@@ -9,28 +9,30 @@
 #include <vector>
 namespace ps {
 
+// Use EmptyHandler if not server
 class EmptyHandler {};
 
 template<class Handler>
 class KVApp {
 public:
-  explicit KVApp(int app_id, Handler handler) {
+  explicit KVApp(int app_id=0, int customer_id=0, std::shared_ptr<Handler> handler=nullptr) {
+    handler_ = handler ? handler : std::make_shared<Handler>();
     _init_message_handlers<PsfType(0)>();
-    obj_.reset(new Customer(
-      app_id, app_id,
+    customer_.reset(new Customer(
+      app_id, customer_id,
       std::bind(&KVApp::_process, this, std::placeholders::_1)
     ));
   }
-  void Wait(int timestamp) { obj_->WaitRequest(timestamp); }
+  void Wait(int timestamp) { customer_->WaitRequest(timestamp); }
   template<PsfType ftype, typename CallBack>
   int Request(const typename PSFData<ftype>::Request &request, const CallBack &cb, int target_server_id) {
-    int timestamp = obj_->NewRequest(kServerGroup);
+    int timestamp = customer_->NewRequest(kServerGroup);
     CallbackStore<ftype>::Get()->store(timestamp, cb);
     // Create message
     Message msg;
     tupleEncode(request, msg.data);
-    msg.meta.app_id = obj_->app_id();
-    msg.meta.customer_id = obj_->customer_id();
+    msg.meta.app_id = customer_->app_id();
+    msg.meta.customer_id = customer_->customer_id();
     msg.meta.timestamp = timestamp;
     msg.meta.recver = Postoffice::Get()->ServerRankToID(target_server_id);
     msg.meta.psftype = ftype;
@@ -38,8 +40,7 @@ public:
     Postoffice::Get()->van()->Send(msg);
     return timestamp;
   }
-  Handler handler;
-  std::unique_ptr<Customer> obj_;
+  std::shared_ptr<Handler> getHandler() { return handler_; }
 private:
   template<PsfType ftype>
   void onReceive(const Message &msg) {
@@ -51,7 +52,7 @@ private:
         typename PSFData<ftype>::Request request;
         typename PSFData<ftype>::Response response;
         tupleDecode(request ,msg.data);
-        handler.serve(request, response);
+        handler_->serve(request, response);
         Message rmsg;
         tupleEncode(response, rmsg.data);
         rmsg.meta = msg.meta;
@@ -80,9 +81,9 @@ private:
       _init_message_handlers<PsfType(ftype+1)>();
     }
   }
-
-  typedef std::function<void(const Message&)> MessageHandle;
-  MessageHandle _message_handlers[kNumPSfunction];
+  std::shared_ptr<Handler> handler_;
+  std::unique_ptr<Customer> customer_;
+  Customer::RecvHandle _message_handlers[kNumPSfunction];
 };
 
 } // namespace ps

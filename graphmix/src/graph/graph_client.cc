@@ -6,7 +6,7 @@ int GraphClient::getserver(node_id idx) {
   return server;
 }
 
-GraphClient::GraphClient() : _kvworker(0, EmptyHandler()) {}
+GraphClient::GraphClient() : _kvworker() {}
 
 GraphClient::query_t
 GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {
@@ -87,14 +87,16 @@ void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offs
 }
 
 void GraphClient::initBinding(py::module& m) {
-  py::class_<GraphClient>(m, "graph client")
+  py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client")
     .def("pull", &GraphClient::pullData)
     .def("wait", &GraphClient::waitData)
     .def("init_meta", &GraphClient::initMeta);
-  m.def("get_client", GraphClient::Get, py::return_value_policy::reference);
+  m.def("get_client", GraphClient::Get);
 }
 
-GraphClient& GraphClient::Get() {
-  static GraphClient w;
-  return w;
+std::shared_ptr<GraphClient> GraphClient::Get() {
+  static std::shared_ptr<GraphClient> ptr;
+  static std::once_flag oc;
+  std::call_once(oc, []() { ptr = std::make_shared<GraphClient>(); });
+  return ptr;
 }

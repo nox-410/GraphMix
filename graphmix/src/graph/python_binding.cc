@@ -8,10 +8,10 @@
 
 PYBIND11_MAKE_OPAQUE(NodePack);
 
-GraphHandle& StartServer() {
-  auto server = new KVApp(0, GraphHandle());
+std::shared_ptr<GraphHandle> StartServer() {
+  auto server = new KVApp<GraphHandle>();
   Postoffice::Get()->RegisterExitCallback([server]() { delete server; });
-  return server->handler;
+  return server->getHandler();
 }
 
 PYBIND11_MODULE(libc_graphmix, m) {
@@ -31,7 +31,7 @@ PYBIND11_MODULE(libc_graphmix, m) {
   m.def("barrier", []() { Postoffice::Get()->Barrier(0, kWorkerGroup); });
   m.def("barrier_all", []() { Postoffice::Get()->Barrier(0, kWorkerGroup | kServerGroup); });
 
-  m.def("start_server", StartServer, py::return_value_policy::reference);
+  m.def("start_server", StartServer);
 
   py::bind_map<NodePack>(m, "NodePack");
   py::class_<NodeData>(m, "NodeData")

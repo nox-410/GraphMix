@@ -72,7 +72,7 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
 }
 
 void GraphHandle::initBinding(py::module &m) {
-  py::class_<GraphHandle>(m, "Graph handle")
+  py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle")
     .def("init_meta", &GraphHandle::initMeta)
     .def("init_data", &GraphHandle::initData);
 }

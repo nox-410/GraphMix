@@ -53,21 +53,24 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   return cur_query;
 }
 
-std::pair<std::shared_ptr<GraphMiniBatch>, GraphClient::query_t>
+GraphClient::query_t
 GraphClient::pullGraph() {
+  py::gil_scoped_release release;
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
   data_mu.unlock();
-
-  py::gil_scoped_release release;
-  std::pair<std::shared_ptr<GraphMiniBatch>, query_t> result;
-  result.first = std::make_shared<GraphMiniBatch>();
   PSFData<GraphPull>::Request request;
-  auto cb = getCallBack<GraphPull>(result.first);
-  result.second = _kvworker.Request<GraphPull>(request, cb, meta_.rank);
-  timestamps.push_back(result.second);
-  return result;
+  auto cb = [cur_query, this] (const PSFData<GraphPull>::Response &response) {
+    auto &csr_i = std::get<2>(response);
+    auto &csr_j = std::get<3>(response);
+    auto graph = std::make_shared<PyGraph>(csr_i, csr_j, csr_i.size() - 1);
+    graph->setFeature(std::get<0>(response), std::get<1>(response));
+    graph_map_[cur_query] = graph;
+  };
+  auto ts = _kvworker.Request<GraphPull>(request, cb, meta_.rank);
+  timestamps.push_back(ts);
+  return cur_query;
 }
 
 /*
@@ -91,6 +94,16 @@ void GraphClient::waitData(query_t query) {
   }
 }
 
+std::shared_ptr<PyGraph> GraphClient::resolveGraph(query_t query) {
+  waitData(query);
+  if (graph_map_.count(query) == 0) {
+    throw std::runtime_error("Graph for the query is not found.");
+  }
+  auto result = graph_map_[query];
+  graph_map_.erase(query);
+  return result;
+}
+
 void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
   PYTHON_CHECK_ARRAY(offset);
   meta_.f_len = f_len;
@@ -108,6 +121,7 @@ void GraphClient::initBinding(py::module& m) {
     .def("pull", &GraphClient::pullData)
     .def("pull_graph", &GraphClient::pullGraph)
     .def("wait", &GraphClient::waitData)
+    .def("resolve", &GraphClient::resolveGraph)
     .def("init_meta", &GraphClient::initMeta);
   m.def("get_client", GraphClient::Get);
 }

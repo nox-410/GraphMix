@@ -9,7 +9,7 @@
 
 namespace py = pybind11;
 
-namespace bind {
+namespace binding {
 
 // snippet for converting std::vector
 template <typename T>

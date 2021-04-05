@@ -35,32 +35,11 @@ PYBIND11_MODULE(libc_graphmix, m) {
 
   py::bind_map<NodePack>(m, "NodePack");
   py::class_<NodeData>(m, "NodeData")
-    .def_property_readonly("f", [](NodeData &n){ return bind::svec_nocp(n.f_feat); } )
-    .def_property_readonly("i", [](NodeData &n){ return bind::svec_nocp(n.i_feat); } )
-    .def_property_readonly("e", [](NodeData &n){ return bind::svec_nocp(n.edge); } );
-  py::class_<GraphMiniBatch, std::shared_ptr<GraphMiniBatch>>(m, "GraphMiniBatch")
-    .def_property_readonly("f", [](GraphMiniBatch &n){ return bind::svec_nocp(n.f_feat); } )
-    .def_property_readonly("i", [](GraphMiniBatch &n){ return bind::svec_nocp(n.i_feat); } )
-    .def_property_readonly("u", [](GraphMiniBatch &n){ return bind::svec_nocp(n.csr_i); } )
-    .def_property_readonly("v", [](GraphMiniBatch &n){ return bind::svec_nocp(n.csr_j); } );
-
-  py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph")
-    .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))
-    .def_property_readonly("edge_index", &PyGraph::getEdgeIndex)
-    .def_property_readonly("num_nodes", &PyGraph::nNodes)
-    .def_property_readonly("num_edges", &PyGraph::nEdges)
-    .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
-    .def("partition", &PyGraph::PyPartition)
-    .def("gcn_norm", &PyGraph::gcnNorm)
-    .def("add_self_loop", &PyGraph::addSelfLoop)
-    .def("remove_self_loop", &PyGraph::removeSelfLoop)
-    .def("__repr__", [](PyGraph &g) {
-          std::stringstream ss;
-          ss << "<PyGraph Object, nodes=" << g.nNodes() << ",";
-          ss << "edges=" << g.nEdges() << ">";
-          return ss.str();
-        });
+    .def_property_readonly("f", [](NodeData &n){ return binding::svec_nocp(n.f_feat); } )
+    .def_property_readonly("i", [](NodeData &n){ return binding::svec_nocp(n.i_feat); } )
+    .def_property_readonly("e", [](NodeData &n){ return binding::svec_nocp(n.edge); } );
 
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);
+  PyGraph::initBinding(m);
 } // PYBIND11_MODULE

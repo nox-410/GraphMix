@@ -15,6 +15,27 @@ PyGraph::PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, siz
   nnodes_ = num_nodes;
 }
 
+py::array_t<graph_float> PyGraph::getFloatFeat() {
+  py::array_t<graph_float> result = binding::svec_nocp(f_feat_);
+  size_t feat_len = f_feat_.size() / nNodes();
+  result.resize({nNodes(), feat_len});
+  return result;
+}
+
+py::array_t<graph_int> PyGraph::getIntFeat() {
+  py::array_t<graph_int> result = binding::svec_nocp(i_feat_);
+  size_t feat_len = i_feat_.size() / nNodes();
+  result.resize({nNodes(), feat_len});
+  return result;
+}
+
+void PyGraph::setFeature(SArray<graph_float> f_feat, SArray<graph_int> i_feat) {
+  if (f_feat.size() % nNodes() != 0 || i_feat.size() % nNodes() != 0)
+    throw std::invalid_argument("feature length not met");
+  f_feat_ = f_feat;
+  i_feat_ = i_feat;
+}
+
 void PyGraph::addSelfLoop() {
   std::vector<bool> check(nNodes(), false);
   for (size_t i = 0;i < nEdges(); i++) {
@@ -154,7 +175,7 @@ std::vector<idx_t> PyGraph::partition(idx_t nparts, bool balance_edge) {
 
 py::array_t<idx_t> PyGraph::PyPartition(int nparts) {
   auto x = partition(nparts, true);
-  return bind::vec(x);
+  return binding::vec(x);
 }
 
 py::list PyGraph::part_graph(int nparts, bool balance_edge) {
@@ -186,9 +207,30 @@ py::list PyGraph::part_graph(int nparts, bool balance_edge) {
   for (int i = 0; i < nparts; i++) {
     py::dict part_dict;
     part_dict["offset"] = offset[i];
-    part_dict["orig_index"] = bind::vec(nodes[i]);
-    part_dict["edges"] = std::make_tuple(bind::vec(edges_u[i]), bind::vec(edges_v[i]));
+    part_dict["orig_index"] = binding::vec(nodes[i]);
+    part_dict["edges"] = std::make_tuple(binding::vec(edges_u[i]), binding::vec(edges_v[i]));
     result.append(part_dict);
   }
   return result;
+}
+
+void PyGraph::initBinding(py::module &m) {
+  py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph")
+    .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))
+    .def_property_readonly("edge_index", &PyGraph::getEdgeIndex)
+    .def_property_readonly("num_nodes", &PyGraph::nNodes)
+    .def_property_readonly("num_edges", &PyGraph::nEdges)
+    .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
+    .def_property_readonly("i_feat", &PyGraph::getIntFeat)
+    .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
+    .def("partition", &PyGraph::PyPartition)
+    .def("gcn_norm", &PyGraph::gcnNorm)
+    .def("add_self_loop", &PyGraph::addSelfLoop)
+    .def("remove_self_loop", &PyGraph::removeSelfLoop)
+    .def("__repr__", [](PyGraph &g) {
+          std::stringstream ss;
+          ss << "<PyGraph Object, nodes=" << g.nNodes() << ",";
+          ss << "edges=" << g.nEdges() << ">";
+          return ss.str();
+        });
 }

@@ -13,9 +13,9 @@ def test(args):
     if rank != 0:
         return
     comm = graphmix._C.get_client()
-    graph, query = comm.pull_graph()
-    comm.wait(query)
-    print(graph, query)
+    query = comm.pull_graph()
+    graph = comm.resolve(query)
+    print(graph.f_feat, graph.i_feat, graph.edge_index)
 
 def server_init(server):
     server.add_local_node_sampler(128)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ps/kvapp.h"
+#include "graph/graph.h"
 #include "common/binding.h"
 
 using namespace ps;
@@ -12,11 +13,12 @@ public:
   // for data push&pull
   typedef uint64_t query_t;
   query_t pullData(py::array_t<node_id> indices, NodePack &nodes);
-  std::pair<std::shared_ptr<GraphMiniBatch>, query_t> pullGraph();
+  query_t pullGraph();
   /*
     wait_data waits until a query success
   */
   void waitData(query_t query);
+  std::shared_ptr<PyGraph> resolveGraph(query_t query);
   static void initBinding(py::module &m);
   void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server);
 
@@ -31,5 +33,6 @@ private:
   std::mutex data_mu;
   KVApp<EmptyHandler> _kvworker;
   GraphMetaData meta_;
+  std::unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
   int getserver(node_id idx);
 };

@@ -33,6 +33,10 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
 void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
   GraphMiniBatch result;
   graph_queue_.pop(result);
+  std::get<0>(response) = result.f_feat;
+  std::get<1>(response) = result.i_feat;
+  std::get<2>(response) = result.csr_i;
+  std::get<3>(response) = result.csr_j;
 }
 
 void GraphHandle::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset) {
@@ -71,10 +75,24 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   }
 }
 
+GraphHandle::~GraphHandle() {
+  for (SamplerPTR sampler: samplers_)
+    sampler->kill();
+  for (SamplerPTR sampler: samplers_)
+    sampler->join();
+}
+
+void GraphHandle::addLocalNodeSampler(size_t batch_size) {
+  auto sampler = std::make_shared<LocalNodeSampler>(this, batch_size);
+  samplers_.push_back(sampler);
+  sampler->sample_start();
+}
+
 void GraphHandle::initBinding(py::module &m) {
   py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle")
     .def("init_meta", &GraphHandle::initMeta)
-    .def("init_data", &GraphHandle::initData);
+    .def("init_data", &GraphHandle::initData)
+    .def("add_local_node_sampler", &GraphHandle::addLocalNodeSampler);
 }
 
 } // namespace ps

@@ -38,6 +38,11 @@ PYBIND11_MODULE(libc_graphmix, m) {
     .def_property_readonly("f", [](NodeData &n){ return bind::svec_nocp(n.f_feat); } )
     .def_property_readonly("i", [](NodeData &n){ return bind::svec_nocp(n.i_feat); } )
     .def_property_readonly("e", [](NodeData &n){ return bind::svec_nocp(n.edge); } );
+  py::class_<GraphMiniBatch, std::shared_ptr<GraphMiniBatch>>(m, "GraphMiniBatch")
+    .def_property_readonly("f", [](GraphMiniBatch &n){ return bind::svec_nocp(n.f_feat); } )
+    .def_property_readonly("i", [](GraphMiniBatch &n){ return bind::svec_nocp(n.i_feat); } )
+    .def_property_readonly("u", [](GraphMiniBatch &n){ return bind::svec_nocp(n.csr_i); } )
+    .def_property_readonly("v", [](GraphMiniBatch &n){ return bind::svec_nocp(n.csr_j); } );
 
   py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph")
     .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))

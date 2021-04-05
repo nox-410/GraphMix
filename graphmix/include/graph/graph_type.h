@@ -18,7 +18,7 @@ typedef std::unordered_map<node_id, NodeData> NodePack;
 struct GraphMiniBatch {
     SArray<graph_float> f_feat;
     SArray<graph_int> i_feat;
-    SArray<node_id> coo_u, coo_v;
+    SArray<node_id> csr_i, csr_j;
 };
 
 struct GraphMetaData {

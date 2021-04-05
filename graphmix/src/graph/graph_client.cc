@@ -53,6 +53,23 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   return cur_query;
 }
 
+std::pair<std::shared_ptr<GraphMiniBatch>, GraphClient::query_t>
+GraphClient::pullGraph() {
+  data_mu.lock();
+  query_t cur_query = next_query++;
+  auto& timestamps = query2timestamp[cur_query];
+  data_mu.unlock();
+
+  py::gil_scoped_release release;
+  std::pair<std::shared_ptr<GraphMiniBatch>, query_t> result;
+  result.first = std::make_shared<GraphMiniBatch>();
+  PSFData<GraphPull>::Request request;
+  auto cb = getCallBack<GraphPull>(result.first);
+  result.second = _kvworker.Request<GraphPull>(request, cb, meta_.rank);
+  timestamps.push_back(result.second);
+  return result;
+}
+
 /*
     wait_data waits until a query success
 */
@@ -89,6 +106,7 @@ void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offs
 void GraphClient::initBinding(py::module& m) {
   py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client")
     .def("pull", &GraphClient::pullData)
+    .def("pull_graph", &GraphClient::pullGraph)
     .def("wait", &GraphClient::waitData)
     .def("init_meta", &GraphClient::initMeta);
   m.def("get_client", GraphClient::Get);

@@ -26,12 +26,14 @@ envvar = [
 "DMLC_PS_WATER_MARK",
 ]
 
-def start_server(graph_data_path):
+def start_server(graph_data_path, server_init):
     os.environ['DMLC_ROLE'] = "server"
     _C.init()
     rank = _C.rank()
-    Shard(graph_data_path, rank).create_server()
+    server = Shard(graph_data_path, rank).create_server()
     _C.barrier_all()
+    if server_init:
+        server_init(server)
     _C.finalize()
 
 def start_scheduler():
@@ -60,7 +62,7 @@ def signal_handler(signal, frame):
 
 process_list = []
 
-def launcher(target, args):
+def launcher(target, args, server_init=None):
     file_path = args.config
     settings = yaml.load(open(file_path).read(), Loader=yaml.FullLoader)
     for key, value in settings["env"].items():
@@ -74,7 +76,7 @@ def launcher(target, args):
         process_list.append(proc)
 
     for i in range(int(settings["launch"]["server"])):
-        proc = multiprocessing.Process(target=start_server, args=[graph_data_path])
+        proc = multiprocessing.Process(target=start_server, args=[graph_data_path, server_init])
         process_list.append(proc)
 
     if settings["launch"]["scheduler"] != 0:

@@ -27,6 +27,6 @@ def test(args):
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("config")
+    parser.add_argument("--config", default="../config/test_config.yml")
     args = parser.parse_args()
     graphmix.launcher(test, args)

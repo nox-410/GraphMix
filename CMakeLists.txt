@@ -19,3 +19,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 include(FetchContent) # download third_party
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/graphmix)
+
+enable_testing()
+ADD_TEST(NAME pullnode COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/test_pull_node.py
+    --config ${CMAKE_SOURCE_DIR}/config/test_config.yml)
+ADD_TEST(NAME basic_sample COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/test_base_sampling.py
+    --config ${CMAKE_SOURCE_DIR}/config/test_config.yml)

@@ -139,7 +139,7 @@ py::array_t<float> PyGraph::gcnNorm(bool use_original_gcn_norm) {
         node_id u = 0;
         for (size_t i = 0; i < nEdges(); i++) {
           node_id v = edge_index_v_[i];
-          while (edge_index_u_[u + 1] <= i) u++;
+          while (size_t(edge_index_u_[u + 1]) <= i) u++;
           norm[i] = sqrt(1.0f / (deg[v] * deg[u]));
         }
       } else {

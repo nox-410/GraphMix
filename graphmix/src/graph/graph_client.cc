@@ -106,6 +106,7 @@ std::shared_ptr<PyGraph> GraphClient::resolveGraph(query_t query) {
 
 void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
   PYTHON_CHECK_ARRAY(offset);
+  CHECK_LT(target_server, Postoffice::Get()->num_servers());
   meta_.f_len = f_len;
   meta_.i_len = i_len;
   meta_.rank = target_server;

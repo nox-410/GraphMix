@@ -10,12 +10,20 @@ max_thread = 5
 def test(args):
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
-    if rank != 0:
-        return
     comm = graphmix._C.get_client()
     query = comm.pull_graph()
     graph = comm.resolve(query)
-    print(graph.f_feat, graph.i_feat, graph.edge_index)
+    graph.convert2coo()
+    cora_dataset = graphmix.dataset.load_dataset("Cora")
+    index = graph.i_feat[:,-1]
+    for f, i in zip(graph.f_feat, graph.i_feat):
+        idx = i[-1]
+        assert np.all(f==cora_dataset.x[idx])
+        assert i[0] == cora_dataset.y[idx]
+    all_edge = np.array(cora_dataset.graph.edge_index).T
+    for u,v in zip(graph.edge_index[0], graph.edge_index[1]):
+        assert (index[u], index[v]) in all_edge
+    print("CHECK OK")
 
 def server_init(server):
     server.add_local_node_sampler(128)

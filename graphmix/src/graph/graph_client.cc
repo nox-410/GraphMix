@@ -64,7 +64,7 @@ GraphClient::pullGraph() {
   auto cb = [cur_query, this] (const PSFData<GraphPull>::Response &response) {
     auto &csr_i = std::get<2>(response);
     auto &csr_j = std::get<3>(response);
-    auto graph = std::make_shared<PyGraph>(csr_i, csr_j, csr_i.size() - 1);
+    auto graph = std::make_shared<PyGraph>(csr_i, csr_j, csr_i.size() - 1, "csr");
     graph->setFeature(std::get<0>(response), std::get<1>(response));
     graph_map_[cur_query] = graph;
   };

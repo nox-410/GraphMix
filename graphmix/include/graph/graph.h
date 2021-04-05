@@ -14,10 +14,11 @@ private:
   SArray<graph_int> i_feat_;
   std::string format_="coo";
 public:
-  PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes);
+  PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes, std::string format="coo");
   ~PyGraph() {}
 
-  //Getter
+  // Getter & Setter
+  auto getFormat() { return format_; }
   auto nNodes() { return nnodes_; }
   auto nEdges() { return edge_index_v_.size(); }
   auto getEdgeIndex() { return py::make_tuple(binding::svec_nocp(edge_index_u_), binding::svec_nocp(edge_index_v_)); }
@@ -28,6 +29,8 @@ public:
   //Graph common API
   void addSelfLoop();
   void removeSelfLoop();
+  void convert2coo();
+  void convert2csr();
   double denseEfficiency();
   std::vector<long> degree();
   py::array_t<float> gcnNorm(bool use_original_gcn_norm);

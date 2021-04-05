@@ -9,10 +9,19 @@ std::shared_ptr<PyGraph> makeGraph(py::array_t<node_id> edge_index, size_t num_n
   return std::make_shared<PyGraph>(edge_index_u, edge_index_v, num_nodes);
 }
 
-PyGraph::PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes) {
+PyGraph::PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes, std::string format) {
   edge_index_u_ = edge_index_u;
   edge_index_v_ = edge_index_v;
   nnodes_ = num_nodes;
+  format_ = format;
+  if (format != "coo" && format != "csr") {
+    throw std::invalid_argument("PyGraph format should be coo or csr");
+  }
+  if (format == "coo") {
+    CHECK_EQ(edge_index_u.size(), edge_index_v.size());
+  } else {
+    CHECK_EQ(edge_index_u.size(), nnodes_ + 1);
+  }
 }
 
 py::array_t<graph_float> PyGraph::getFloatFeat() {
@@ -37,6 +46,7 @@ void PyGraph::setFeature(SArray<graph_float> f_feat, SArray<graph_int> i_feat) {
 }
 
 void PyGraph::addSelfLoop() {
+  convert2coo();
   std::vector<bool> check(nNodes(), false);
   for (size_t i = 0;i < nEdges(); i++) {
     if (edge_index_u_[i] == edge_index_v_[i]) {
@@ -54,6 +64,7 @@ void PyGraph::addSelfLoop() {
 }
 
 void PyGraph::removeSelfLoop() {
+  convert2coo();
   SArray<node_id> u, v;
   u.reserve(nEdges());
   v.reserve(nEdges());
@@ -73,10 +84,48 @@ double PyGraph::denseEfficiency() {
 
 std::vector<long> PyGraph::degree() {
   std::vector<long> deg(nNodes(), 0);
-  for (size_t i = 0;i < nEdges(); i++) {
-    deg[edge_index_u_[i]]++;
+  if (format_ == "csr") {
+    for (size_t i = 0;i < nNodes(); i++) {
+      deg[i] = edge_index_u_[i + 1] - edge_index_u_[i];
+    }
+  } else {
+    for (size_t i = 0;i < nEdges(); i++) {
+      deg[edge_index_u_[i]]++;
+    }
   }
   return deg;
+}
+
+void PyGraph::convert2coo() {
+  if (format_ == "coo") return;
+  SArray<node_id> coo_u(nEdges());
+  for (size_t i = 0; i < nNodes(); i++) {
+    for (node_id j = edge_index_u_[i]; j < edge_index_u_[i + 1]; j++)
+      coo_u[j] = i;
+  }
+  edge_index_u_ = coo_u;
+  format_ = "coo";
+}
+
+void PyGraph::convert2csr() {
+  if (format_ == "csr") return;
+  SArray<node_id> indices(nEdges()), indptr(nNodes() + 1);
+  auto deg = degree();
+  indptr[0] = 0;
+  for (size_t i = 1; i <= nNodes(); i++) {
+    indptr[i] = deg[i-1] + indptr[i-1];
+  }
+
+  SArray<node_id> temp;
+  temp.CopyFrom(indptr);
+  for (size_t i = 0; i < nEdges(); i++) {
+    node_id u = edge_index_u_[i], v = edge_index_v_[i];
+    indices[temp[u]] = v;
+    temp[u]++;
+  }
+  edge_index_u_ = indptr;
+  edge_index_v_ = indices;
+  format_ = "csr";
 }
 
 py::array_t<float> PyGraph::gcnNorm(bool use_original_gcn_norm) {
@@ -86,9 +135,18 @@ py::array_t<float> PyGraph::gcnNorm(bool use_original_gcn_norm) {
   {
     py::gil_scoped_release release;
     if (use_original_gcn_norm) {
-      for (size_t i = 0;i < nEdges(); i++) {
-        node_id v = edge_index_v_[i], u = edge_index_u_[i];
-        norm[i] = sqrt(1.0f / (deg[v] * deg[u]));
+      if (format_ == "csr") {
+        node_id u = 0;
+        for (size_t i = 0; i < nEdges(); i++) {
+          node_id v = edge_index_v_[i];
+          while (edge_index_u_[u + 1] <= i) u++;
+          norm[i] = sqrt(1.0f / (deg[v] * deg[u]));
+        }
+      } else {
+        for (size_t i = 0; i < nEdges(); i++) {
+          node_id v = edge_index_v_[i], u = edge_index_u_[i];
+          norm[i] = sqrt(1.0f / (deg[v] * deg[u]));
+        }
       }
     } else {
       for (size_t i = 0;i < nEdges(); i++) {
@@ -103,6 +161,7 @@ py::array_t<float> PyGraph::gcnNorm(bool use_original_gcn_norm) {
 
 std::vector<idx_t> PyGraph::partition(idx_t nparts, bool balance_edge) {
   assert(nparts >= 1);
+  convert2coo();
   if (nparts == 1) {
     return std::vector<idx_t>(nNodes(), 0);
   }
@@ -220,6 +279,7 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("edge_index", &PyGraph::getEdgeIndex)
     .def_property_readonly("num_nodes", &PyGraph::nNodes)
     .def_property_readonly("num_edges", &PyGraph::nEdges)
+    .def_property_readonly("format", &PyGraph::getFormat)
     .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
     .def_property_readonly("i_feat", &PyGraph::getIntFeat)
     .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
@@ -227,6 +287,8 @@ void PyGraph::initBinding(py::module &m) {
     .def("gcn_norm", &PyGraph::gcnNorm)
     .def("add_self_loop", &PyGraph::addSelfLoop)
     .def("remove_self_loop", &PyGraph::removeSelfLoop)
+    .def("convert2csr", &PyGraph::convert2csr)
+    .def("convert2coo", &PyGraph::convert2coo)
     .def("__repr__", [](PyGraph &g) {
           std::stringstream ss;
           ss << "<PyGraph Object, nodes=" << g.nNodes() << ",";

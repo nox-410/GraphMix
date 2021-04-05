@@ -41,11 +41,11 @@ def start_scheduler():
     _C.init()
     _C.finalize()
 
-def start_worker(func, args, num_local_worker, graph_data_path):
+def start_worker(func, args, graph_data_path):
     os.environ['DMLC_ROLE'] = "worker"
     _C.init()
-    local_rank = _C.rank() % num_local_worker
-    target_server = _C.rank() // num_local_worker
+    local_rank = _C.rank() % args.num_local_worker
+    target_server = _C.rank() // args.num_local_worker + _C.rank() % args.num_local_server
     args.local_rank = local_rank
     shard = Shard(graph_data_path, -1)
     shard.init_worker(target_server)
@@ -69,13 +69,13 @@ def launcher(target, args, server_init=None):
         os.environ[str(key)] = str(value)
 
     graph_data_path = os.path.abspath(settings["launch"]["data"])
-
-    num_local_worker = int(settings["launch"]["worker"])
-    for i in range(num_local_worker):
-        proc = multiprocessing.Process(target=start_worker, args=[target, args, num_local_worker, graph_data_path])
+    args.num_local_worker = int(settings["launch"]["worker"])
+    args.num_local_server = int(settings["launch"]["server"])
+    for i in range(args.num_local_worker):
+        proc = multiprocessing.Process(target=start_worker, args=[target, args, graph_data_path])
         process_list.append(proc)
 
-    for i in range(int(settings["launch"]["server"])):
+    for i in range(args.num_local_server):
         proc = multiprocessing.Process(target=start_server, args=[graph_data_path, server_init])
         process_list.append(proc)
 

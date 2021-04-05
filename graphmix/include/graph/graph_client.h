@@ -3,6 +3,7 @@
 #include "ps/kvapp.h"
 #include "graph/graph.h"
 #include "common/binding.h"
+#include "common/thread_safe_hash_map.h"
 
 using namespace ps;
 
@@ -33,6 +34,6 @@ private:
   std::mutex data_mu;
   KVApp<EmptyHandler> _kvworker;
   GraphMetaData meta_;
-  std::unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
+  threadsafe_unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
   int getserver(node_id idx);
 };

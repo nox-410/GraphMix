@@ -7,6 +7,4 @@ def __handle_import():
 __handle_import()
 import libc_graphmix as _C
 from . import dataset
-from . import graph
-from . import nn
 from .launcher import launcher

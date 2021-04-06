@@ -1,5 +1,6 @@
+import libc_graphmix as _C
+
 import os
-from ..graph import Graph
 import numpy as np
 
 dataset_root = os.path.dirname(__file__)+"/.dataset/"
@@ -9,7 +10,7 @@ class PlanetoidDataset():
         from torch_geometric.datasets import Planetoid
         dataset = Planetoid(root=root, name=name)
         data = dataset[0]
-        self.graph = Graph(
+        self.graph = _C.Graph(
             edge_index=data.edge_index.numpy(),
             num_nodes=data.num_nodes
         )
@@ -23,7 +24,7 @@ class RedditDataset():
         from torch_geometric.datasets import Reddit
         dataset = Reddit(root=root)
         data = dataset[0]
-        self.graph = Graph(
+        self.graph = _C.Graph(
             edge_index=data.edge_index.numpy(),
             num_nodes=data.num_nodes
         )
@@ -37,7 +38,7 @@ class OGBDataset():
         from ogb.nodeproppred import PygNodePropPredDataset
         dataset = PygNodePropPredDataset(name=name, root=root)
         data = dataset[0]
-        self.graph = Graph(
+        self.graph = _C.Graph(
             edge_index=data.edge_index.numpy(),
             num_nodes=data.num_nodes
         )
@@ -85,7 +86,7 @@ def load_sparse_dataset(name):
         idx_max = np.max(feat) + 1
         node_id = np.arange(feat.shape[0]).reshape(-1, 1) + idx_max
         idx_max += feat.shape[0]
-        g = Graph(
+        g = _C.Graph(
             x = np.concatenate([feat, node_id ,data["train_map"].reshape(-1, 1)], axis=-1),
             y = data['y'],
             edge_index = directed,
@@ -98,7 +99,7 @@ def load_sparse_dataset(name):
         directed = np.concatenate([edge, edge[[1,0]]], axis=1)
         idx_max = np.max(feat) + 1
         print(idx_max)
-        g = Graph(
+        g = _C.Graph(
             x = np.concatenate([feat ,data["train_map"].reshape(-1, 1)], axis=-1),
             y = data['y'],
             edge_index = directed,
@@ -116,7 +117,7 @@ def load_sparse_dataset(name):
 def add_nodeid(graph):
     idx = np.arange(graph.num_nodes).reshape(-1, 1)
     x = np.concatenate([graph.x, idx], axis=-1)
-    return Graph(x=x, y=graph.y, edge_index=graph.edge_index, num_classes=graph.num_classes)
+    return _C.Graph(x=x, y=graph.y, edge_index=graph.edge_index, num_classes=graph.num_classes)
 
 def add_train_eval_map(graph, ratio):
     role = np.zeros(graph.num_nodes)
@@ -125,7 +126,7 @@ def add_train_eval_map(graph, ratio):
     np.random.shuffle(role)
     role = role.reshape(-1, 1)
     x = np.concatenate([graph.x, role], axis=-1)
-    return Graph(x=x, y=graph.y, edge_index=graph.edge_index, num_classes=graph.num_classes)
+    return _C.Graph(x=x, y=graph.y, edge_index=graph.edge_index, num_classes=graph.num_classes)
 
 def process_ogbn_mag_dataset(dataset):
     data = dataset[0]
@@ -154,7 +155,7 @@ def process_ogbn_mag_dataset(dataset):
     author = data.edge_index_dict[('author', 'writes', 'paper')].numpy()
     paper_author = process_sparse_idx(author[[1, 0]], 10, idx_max)
     idx_max += data.num_nodes_dict['author'] + 1
-    g = Graph(
+    g = _C.Graph(
         x=np.concatenate([paper_field, paper_author ,node_id, train_mask], axis=1),
         y=data.y_dict["paper"].numpy().squeeze(),
         edge_index=directed,

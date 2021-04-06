@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-class torch_GCN(torch.nn.Module):
+class GCN(torch.nn.Module):
     def __init__(self, in_features, out_features, activation=None, dropout=0):
         super().__init__()
         self.l = torch.nn.Linear(in_features, out_features, bias=True)
@@ -20,7 +20,7 @@ class torch_GCN(torch.nn.Module):
             raise NotImplementedError
         return x
 
-class torch_Sage(torch.nn.Module):
+class SageConv(torch.nn.Module):
     def __init__(self, in_features, out_features, activation=None, dropout=0):
         super().__init__()
         self.l = torch.nn.Linear(in_features, out_features, bias=True)

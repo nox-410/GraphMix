@@ -6,6 +6,12 @@
 
 namespace cache {
 
+enum class policy {
+  LRU,
+  LFU,
+  LFUOpt,
+};
+
 /*
   Cache:
     Cache is the Base class of all cache Policy

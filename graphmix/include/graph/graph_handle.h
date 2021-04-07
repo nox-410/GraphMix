@@ -1,11 +1,10 @@
 #pragma once
 
-#include "ps/psf/PSFunc.h"
-#include "graph/graph_type.h"
+#include "ps/kvapp.h"
+#include "graph/remote_handle.h"
+#include "graph/sampler.h"
 #include "common/binding.h"
 #include "common/MPMCQueue.h"
-
-#include "graph/sampler.h"
 
 namespace ps {
 
@@ -27,6 +26,8 @@ public:
   size_t iLen() { return meta_.i_len; }
   size_t fLen() { return meta_.f_len; }
   NodeData getNode(node_id idx) { return nodes_[idx]; }
+  void createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app);
+  void initCache(double ratio, cache::policy policy);
 private:
 // ---------------------- static node data -------------------------------------
   std::vector<NodeData> nodes_;
@@ -36,6 +37,10 @@ private:
 // ---------------------- sampler management -----------------------------------
   rigtorp::mpmc::Queue<GraphMiniBatch> graph_queue_;
   std::vector<SamplerPTR> samplers_;
+// ---------------------- Remote data handle -----------------------------------
+  std::unique_ptr<RemoteHandle> remote_;
 };
+
+std::shared_ptr<GraphHandle> StartServer();
 
 } // namespace ps

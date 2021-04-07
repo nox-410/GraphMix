@@ -1,4 +1,3 @@
-#include "ps/kvapp.h"
 #include "graph/graph_client.h"
 #include "graph/graph_handle.h"
 #include "common/binding.h"
@@ -7,12 +6,6 @@
 #include <pybind11/stl_bind.h>
 
 PYBIND11_MAKE_OPAQUE(NodePack);
-
-std::shared_ptr<GraphHandle> StartServer() {
-  auto server = new KVApp<GraphHandle>();
-  Postoffice::Get()->RegisterExitCallback([server]() { delete server; });
-  return server->getHandler();
-}
 
 PYBIND11_MODULE(libc_graphmix, m) {
   m.doc() = "graphmix graph server C++ backend";
@@ -38,6 +31,11 @@ PYBIND11_MODULE(libc_graphmix, m) {
     .def_property_readonly("f", [](NodeData &n){ return binding::vec_nocp(n->f_feat); } )
     .def_property_readonly("i", [](NodeData &n){ return binding::vec_nocp(n->i_feat); } )
     .def_property_readonly("e", [](NodeData &n){ return binding::vec_nocp(n->edge); } );
+
+  py::enum_<cache::policy>(m, "cache")
+    .value("LRU", cache::policy::LRU)
+    .value("LFU", cache::policy::LFU)
+    .value("LFUOpt", cache::policy::LFUOpt);
 
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);

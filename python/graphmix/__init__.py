@@ -6,5 +6,6 @@ def __handle_import():
     sys.path.append(lib_path)
 __handle_import()
 import libc_graphmix as _C
+from libc_graphmix import cache
 from . import dataset
 from .launcher import launcher

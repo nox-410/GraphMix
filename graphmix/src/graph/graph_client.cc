@@ -133,6 +133,7 @@ void GraphClient::initBinding(py::module& m) {
 std::shared_ptr<GraphClient> GraphClient::Get() {
   static std::shared_ptr<GraphClient> ptr;
   static std::once_flag oc;
+  CHECK(Postoffice::Get()->is_worker());
   std::call_once(oc, []() { ptr = std::make_shared<GraphClient>(); });
   return ptr;
 }

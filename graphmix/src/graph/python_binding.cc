@@ -34,10 +34,10 @@ PYBIND11_MODULE(libc_graphmix, m) {
   m.def("start_server", StartServer);
 
   py::bind_map<NodePack>(m, "NodePack");
-  py::class_<NodeData>(m, "NodeData")
-    .def_property_readonly("f", [](NodeData &n){ return binding::svec_nocp(n.f_feat); } )
-    .def_property_readonly("i", [](NodeData &n){ return binding::svec_nocp(n.i_feat); } )
-    .def_property_readonly("e", [](NodeData &n){ return binding::svec_nocp(n.edge); } );
+  py::class_<_NodeData, NodeData>(m, "NodeData")
+    .def_property_readonly("f", [](NodeData &n){ return binding::vec_nocp(n->f_feat); } )
+    .def_property_readonly("i", [](NodeData &n){ return binding::vec_nocp(n->i_feat); } )
+    .def_property_readonly("e", [](NodeData &n){ return binding::vec_nocp(n->edge); } );
 
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);

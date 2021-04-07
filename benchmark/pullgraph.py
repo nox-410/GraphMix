@@ -9,8 +9,8 @@ max_thread = 5
 def test(args):
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
-    # if rank != 0:
-    #     return
+    if rank != 0:
+        return
     comm = graphmix._C.get_client()
     item_count = 0
     def pull_graph():

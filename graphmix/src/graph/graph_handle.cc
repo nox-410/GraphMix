@@ -15,14 +15,14 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
   for (size_t i = 0; i < n; i++) {
     CHECK(keys[i] >= local_offset_ && keys[i] < local_offset_ + num_local_nodes_);
     auto node = nodes_[keys[i] - local_offset_];
-    offset[i + 1] = offset[i] + node.edge.size();
+    offset[i + 1] = offset[i] + node->edge.size();
   }
   SArray<node_id> edge(offset[n]);
   for (size_t i = 0; i < n; i++) {
     auto node = nodes_[keys[i] - local_offset_];
-    std::copy(node.f_feat.begin(), node.f_feat.end(), &f_feat[i * meta_.f_len]);
-    std::copy(node.i_feat.begin(), node.i_feat.end(), &i_feat[i * meta_.i_len]);
-    std::copy(node.edge.begin(), node.edge.end(), &edge[offset[i]]);
+    std::copy(node->f_feat.begin(), node->f_feat.end(), &f_feat[i * meta_.f_len]);
+    std::copy(node->i_feat.begin(), node->i_feat.end(), &i_feat[i * meta_.i_len]);
+    std::copy(node->edge.begin(), node->edge.end(), &edge[offset[i]]);
   }
   get<0>(response) = f_feat;
   get<1>(response) = i_feat;
@@ -62,16 +62,18 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   CHECK(i_feat.ndim() == 2 && i_feat.shape(0) == num_local_nodes_ && (size_t)i_feat.shape(1) == meta_.i_len);
   CHECK(edges.ndim() == 2 && edges.shape(0) == 2);
   size_t nedges = edges.shape(1);
+  nodes_.resize(num_local_nodes_);
   for (node_id i = 0 ; i < num_local_nodes_; i++) {
-    NodeData node;
-    node.i_feat.CopyFrom(i_feat.data(i, 0), meta_.i_len);
-    node.f_feat.CopyFrom(f_feat.data(i, 0), meta_.f_len);
-    nodes_.emplace_back(node);
+    nodes_[i] = makeNodeData();
+    nodes_[i]->f_feat.resize(fLen());
+    nodes_[i]->i_feat.resize(iLen());
+    std::copy(f_feat.data(i, 0), f_feat.data(i, 0) + fLen(), nodes_[i]->f_feat.data());
+    std::copy(i_feat.data(i, 0), i_feat.data(i, 0) + iLen(), nodes_[i]->i_feat.data());
   }
   for (size_t i = 0; i < nedges; i++) {
     node_id u = edges.at(0, i), v = edges.at(1, i);
     CHECK(u >= local_offset_ && u < local_offset_ + num_local_nodes_);
-    nodes_[u - local_offset_].edge.push_back(v);
+    nodes_[u - local_offset_]->edge.push_back(v);
   }
 }
 

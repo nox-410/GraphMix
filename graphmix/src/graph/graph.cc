@@ -296,3 +296,7 @@ void PyGraph::initBinding(py::module &m) {
           return ss.str();
         });
 }
+
+NodeData makeNodeData() {
+  return NodeData(new _NodeData());
+}

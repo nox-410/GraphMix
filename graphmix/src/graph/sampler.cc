@@ -39,14 +39,14 @@ GraphMiniBatch BaseSampler::construct(const NodePack &node_pack) {
     idx_map[node.first] = idx_map.size();
   for (auto &node : node_pack) {
     node_id idx = idx_map[node.first];
-    for (node_id neighbor : node.second.edge) {
+    for (node_id neighbor : node.second->edge) {
       if (idx_map.count(neighbor)) {
         graph.csr_j.push_back(idx_map[neighbor]);
       }
     }
     graph.csr_i[idx + 1] = graph.csr_j.size();
-    std::copy(node.second.f_feat.begin(), node.second.f_feat.end(), &graph.f_feat[idx * handle_->fLen()]);
-    std::copy(node.second.i_feat.begin(), node.second.i_feat.end(), &graph.i_feat[idx * handle_->iLen()]);
+    std::copy(node.second->f_feat.begin(), node.second->f_feat.end(), &graph.f_feat[idx * handle_->fLen()]);
+    std::copy(node.second->i_feat.begin(), node.second->i_feat.end(), &graph.i_feat[idx * handle_->iLen()]);
   }
   return graph;
 }

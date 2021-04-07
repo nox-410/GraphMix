@@ -26,7 +26,7 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   nodes.reserve(n);
   for (size_t i = 0; i < n; i++) {
     keys[getserver(indices[i])].push_back(indices[i]);
-    nodes[indices[i]] = NodeData(); // avoid race condition in callback
+    nodes[indices[i]] = makeNodeData(); // avoid race condition in callback
   }
   for (int server = 0; server < nserver; server++) {
     if (keys[server].size() == 0) continue;
@@ -41,9 +41,12 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
       CHECK_EQ(offset[offset.size() - 1], edge.size()) << std::endl;
       for (size_t i = 0; i < pull_keys.size(); i++) {
         auto &node = nodes[pull_keys[i]];
-        node.f_feat = f_feat.segment(i * f_len, (i + 1) * f_len);
-        node.i_feat = i_feat.segment(i * i_len, (i + 1) * i_len);
-        node.edge = edge.segment(offset[i], offset[i + 1]);
+        node->f_feat.resize(f_len);
+        node->i_feat.resize(i_len);
+        node->edge.resize(offset[i+1]-offset[i]);
+        std::copy(&f_feat[i*f_len], &f_feat[(i + 1) * f_len], node->f_feat.data());
+        std::copy(&i_feat[i*i_len], &i_feat[(i + 1) * i_len], node->i_feat.data());
+        std::copy(&edge[offset[i]], &edge[offset[i+1]], node->edge.data());
       }
     };
     auto cb = std::bind(callback, std::placeholders::_1, std::ref(nodes));

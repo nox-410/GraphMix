@@ -43,4 +43,4 @@ public:
   static void initBinding(py::module &m);
 };
 
-std::shared_ptr<PyGraph> makeGraph(py::array_t<long> edge_index, size_t num_nodes);
+std::shared_ptr<PyGraph> makeGraph(py::array_t<node_id> edge_index, size_t num_nodes);

@@ -41,4 +41,6 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="../config/test_config.yml")
     args = parser.parse_args()
+    import os
+    os.environ["PS_WORKER_THREAD"]=str(max_thread)
     graphmix.launcher(test, args)

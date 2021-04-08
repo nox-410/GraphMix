@@ -6,9 +6,10 @@
 namespace ps {
 
 enum class SamplerType {
-  kLocalNode = 0,
-  kGraphSage,
+  kGraphSage = 0,
   kRandomWalk,
+  kGlobalNode,
+  kLocalNode,
   kNumSamplerType,
 };
 
@@ -42,5 +43,25 @@ private:
   RandomIndexSelecter rd_;
   size_t batch_size_;
 };
+
+class GlobalNodeSampler : public BaseSampler {
+public:
+  GlobalNodeSampler(GraphHandle *handle, size_t batch_size);
+  GraphMiniBatch sample_once();
+  SamplerType type() { return SamplerType::kGlobalNode; }
+private:
+  RandomIndexSelecter rd_;
+  size_t batch_size_;
+};
+
+// class GraphSageSampler : public BaseSampler {
+// public:
+//   GraphSageSampler(GraphHandle *handle, size_t batch_size, int depth, int width);
+//   GraphMiniBatch sample_once();
+//   SamplerType type() { return SamplerType::kGraphSage; }
+// private:
+//   RandomIndexSelecter rd_;
+//   size_t batch_size_;
+// };
 
 }

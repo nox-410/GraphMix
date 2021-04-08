@@ -86,6 +86,12 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   }
 }
 
+int GraphHandle::getServer(node_id idx) {
+  int server = 0;
+  while (idx >= meta_.offset[server + 1]) server++;
+  return server;
+}
+
 GraphHandle::~GraphHandle() {
   for (SamplerPTR sampler: samplers_)
     sampler->kill();
@@ -103,6 +109,16 @@ void GraphHandle::addLocalNodeSampler(size_t batch_size) {
   sampler->sample_start();
 }
 
+void GraphHandle::addGlobalNodeSampler(size_t batch_size) {
+  if (!graph_queue_.count(SamplerType::kGlobalNode)) {
+    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(10);
+    graph_queue_.emplace(SamplerType::kGlobalNode, std::move(ptr));
+  }
+  auto sampler = std::make_shared<GlobalNodeSampler>(this, batch_size);
+  samplers_.push_back(sampler);
+  sampler->sample_start();
+}
+
 void GraphHandle::push(const GraphMiniBatch &graph, SamplerType type) {
   graph_queue_[type]->push(graph);
 }
@@ -112,12 +128,13 @@ void GraphHandle::initBinding(py::module &m) {
     .def("init_meta", &GraphHandle::initMeta)
     .def("init_data", &GraphHandle::initData)
     .def("init_cache", &GraphHandle::initCache)
-    .def("add_local_node_sampler", &GraphHandle::addLocalNodeSampler);
+    .def("add_local_node_sampler", &GraphHandle::addLocalNodeSampler)
+    .def("add_global_node_sampler", &GraphHandle::addGlobalNodeSampler);
 }
 
 void GraphHandle::createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app) {
   CHECK(app != nullptr);
-  remote_ = std::make_unique<RemoteHandle>(app);
+  remote_ = std::make_unique<RemoteHandle>(app, this);
 }
 
 void GraphHandle::initCache(double ratio, cache::policy policy) {

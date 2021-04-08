@@ -59,9 +59,26 @@ GraphMiniBatch LocalNodeSampler::sample_once() {
   NodePack node_pack;
   auto nodes = rd_.unique(batch_size_, handle_->nNodes());
   for (node_id node: nodes) {
-    node_pack.emplace(node + handle_->offset(), handle_->getNode(node));
+    node_pack.emplace(node + handle_->offset(), handle_->getNode(node + handle_->offset()));
   }
   return construct(node_pack);
+}
+
+GlobalNodeSampler::GlobalNodeSampler(GraphHandle *handle, size_t batch_size) : BaseSampler(handle) {
+  batch_size_ = batch_size;
+}
+
+GraphMiniBatch GlobalNodeSampler::sample_once() {
+  sampleState state = handle_->getRemote()->getSampleState(type());
+  if (state->recvNodes.empty()) {
+    // new samples
+    auto nodes = rd_.unique(batch_size_, handle_->numGraphNodes());
+    for (auto node : nodes) state->query_nodes.emplace(node);
+    handle_->getRemote()->queryRemote(std::move(state));
+    return sample_once();
+  } else {
+    return construct(state->recvNodes);
+  }
 }
 
 }

@@ -22,14 +22,20 @@ public:
   void initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);
   void push(const GraphMiniBatch &graph, SamplerType type);
 
-  void addLocalNodeSampler(size_t batch_size);
   node_id nNodes() { return num_local_nodes_; }
   node_id offset() { return local_offset_; }
+  node_id numGraphNodes() { return meta_.num_nodes; }
   size_t iLen() { return meta_.i_len; }
   size_t fLen() { return meta_.f_len; }
-  NodeData getNode(node_id idx) { return nodes_[idx]; }
+  NodeData getNode(node_id idx) { return nodes_[idx - local_offset_]; }
+  bool isLocalNode(node_id idx) { return idx >= local_offset_ && idx < local_offset_ + num_local_nodes_; }
+  int getServer(node_id idx);
   void createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app);
   void initCache(double ratio, cache::policy policy);
+  auto& getRemote() { return remote_; }
+
+  void addLocalNodeSampler(size_t batch_size);
+  void addGlobalNodeSampler(size_t batch_size);
 private:
 // ---------------------- static node data -------------------------------------
   std::vector<NodeData> nodes_;

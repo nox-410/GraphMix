@@ -32,8 +32,15 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
 }
 
 void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
+  CHECK(!graph_queue_.empty()) << "No sampler registered";
   GraphMiniBatch result;
-  graph_queue_.pop(result);
+  bool success = false;
+  for (auto &queue : graph_queue_) {
+    success = queue.second->try_pop(result);
+    if (success) break;
+  }
+  // If all samplers are not ready, use the one with lowest priority
+  if (!success) graph_queue_.rbegin()->second->pop(result);
   std::get<0>(response) = result.f_feat;
   std::get<1>(response) = result.i_feat;
   std::get<2>(response) = result.csr_i;
@@ -87,9 +94,17 @@ GraphHandle::~GraphHandle() {
 }
 
 void GraphHandle::addLocalNodeSampler(size_t batch_size) {
+  if (!graph_queue_.count(SamplerType::kLocalNode)) {
+    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(10);
+    graph_queue_.emplace(SamplerType::kLocalNode, std::move(ptr));
+  }
   auto sampler = std::make_shared<LocalNodeSampler>(this, batch_size);
   samplers_.push_back(sampler);
   sampler->sample_start();
+}
+
+void GraphHandle::push(const GraphMiniBatch &graph, SamplerType type) {
+  graph_queue_[type]->push(graph);
 }
 
 void GraphHandle::initBinding(py::module &m) {

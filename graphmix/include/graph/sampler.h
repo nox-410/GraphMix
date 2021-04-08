@@ -5,6 +5,13 @@
 
 namespace ps {
 
+enum class SamplerType {
+  kLocalNode = 0,
+  kGraphSage,
+  kRandomWalk,
+  kNumSamplerType,
+};
+
 class GraphHandle;
 
 class BaseSampler {
@@ -16,6 +23,7 @@ public:
   void join();
   virtual GraphMiniBatch sample_once() = 0;
   virtual ~BaseSampler() {}
+  virtual SamplerType type() = 0;
   GraphMiniBatch construct(const NodePack &node_pack);
   std::shared_ptr<GraphHandle> handle_;
 private:
@@ -29,6 +37,7 @@ class LocalNodeSampler : public BaseSampler {
 public:
   LocalNodeSampler(GraphHandle *handle, size_t batch_size);
   GraphMiniBatch sample_once();
+  SamplerType type() { return SamplerType::kLocalNode; }
 private:
   RandomIndexSelecter rd_;
   size_t batch_size_;

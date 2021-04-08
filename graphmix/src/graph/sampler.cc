@@ -8,7 +8,7 @@ BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this
 void BaseSampler::sample_loop() {
   while (!killed_) {
     GraphMiniBatch graph = sample_once();
-    handle_->push(graph);
+    handle_->push(graph, type());
   }
   handle_.reset();
 }

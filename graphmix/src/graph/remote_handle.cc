@@ -57,14 +57,13 @@ void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys,
   auto f_len = handle_->fLen(), i_len = handle_->iLen();
   CHECK_EQ(offset[offset.size() - 1], edge.size());
   for (size_t i = 0; i < pull_keys.size(); i++) {
-    auto node = makeNodeData();
+    auto &node = state->recvNodes[pull_keys[i]];
     node->f_feat.resize(f_len);
     node->i_feat.resize(i_len);
     node->edge.resize(offset[i+1]-offset[i]);
     std::copy(&f_feat[i*f_len], &f_feat[(i + 1) * f_len], node->f_feat.data());
     std::copy(&i_feat[i*i_len], &i_feat[(i + 1) * i_len], node->i_feat.data());
     std::copy(&edge[offset[i]], &edge[offset[i+1]], node->edge.data());
-    state->recvNodes[pull_keys[i]] = node;
   }
   state->mtx.lock();
   int wait_num = state->wait_num--;
@@ -115,31 +114,31 @@ void RemoteHandle::queryRemote(sampleState state) {
 }
 
 void RemoteHandle::filterNode(sampleState &state) {
+  size_t local_cnt = 0;
   state->recvNodes.reserve(state->query_nodes.size());
   for (auto iter=state->query_nodes.begin(); iter != state->query_nodes.end();) {
     node_id node = *iter;
     if (handle_->isLocalNode(node)) {
       state->recvNodes[node] = handle_->getNode(node);
+      local_cnt++;
+    } else if (cache_)  {
+      std::lock_guard lock(cache_mtx_);
+      cache_->lookup(node, state->recvNodes[node]);
+    }
+    // create empty slot to avoid write conflict on callback
+    if (state->recvNodes[node]) {
       iter = state->query_nodes.erase(iter);
     } else {
-      // create empty slot to avoid write conflict on callback
-      state->recvNodes[node];
+      state->recvNodes[node] = makeNodeData();
       iter++;
     }
   }
-  if (cache_) {
-    // query cache, replace query_nodes with miss_nodes
-    std::lock_guard lock(cache_mtx_);
-    for (auto iter=state->query_nodes.begin(); iter != state->query_nodes.end();) {
-      node_id node = *iter;
-      cache_->lookup(node, state->recvNodes[node]);
-      if (!state->recvNodes[node]) {
-        iter = state->query_nodes.erase(iter);
-      } else {
-        iter++;
-      }
-    }
-  }
+  // Handle profile data
+  cache_mtx_.lock();
+  total_cnt_ += state->recvNodes.size();
+  nonlocal_cnt_ += state->recvNodes.size() - local_cnt;
+  cache_miss_cnt_ += state->query_nodes.size();
+  cache_mtx_.unlock();
 }
 
 } // namespace ps

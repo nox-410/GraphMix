@@ -128,6 +128,7 @@ void GraphHandle::initBinding(py::module &m) {
     .def("init_meta", &GraphHandle::initMeta)
     .def("init_data", &GraphHandle::initData)
     .def("init_cache", &GraphHandle::initCache)
+    .def("get_perf", &GraphHandle::getProfileData)
     .def("add_local_node_sampler", &GraphHandle::addLocalNodeSampler)
     .def("add_global_node_sampler", &GraphHandle::addGlobalNodeSampler);
 }

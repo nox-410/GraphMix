@@ -36,6 +36,9 @@ public:
 
   void addLocalNodeSampler(size_t batch_size);
   void addGlobalNodeSampler(size_t batch_size);
+  py::tuple getProfileData() {
+    return py::make_tuple(remote_->cache_miss_cnt_, remote_->nonlocal_cnt_, remote_->total_cnt_);
+  }
 private:
 // ---------------------- static node data -------------------------------------
   std::vector<NodeData> nodes_;

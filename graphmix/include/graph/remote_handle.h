@@ -30,6 +30,9 @@ public:
   void initCache(size_t, cache::policy);
   void queryRemote(sampleState state);
   sampleState getSampleState(SamplerType type);
+
+  // Profile data
+  size_t total_cnt_ = 0, cache_miss_cnt_ = 0, nonlocal_cnt_ = 0;
 private:
   // Insert cache, push to recv_queue_ in defaultCallback
   void defaultCallback(const sampleState &state);

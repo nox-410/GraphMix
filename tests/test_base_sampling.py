@@ -26,7 +26,7 @@ def test(args):
     print("CHECK OK")
 
 def server_init(server):
-    server.add_local_node_sampler(128)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=128)
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

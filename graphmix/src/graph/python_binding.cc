@@ -37,6 +37,12 @@ PYBIND11_MODULE(libc_graphmix, m) {
     .value("LFU", cache::policy::LFU)
     .value("LFUOpt", cache::policy::LFUOpt);
 
+  py::enum_<SamplerType>(m, "sampler")
+    .value("LocalNode", SamplerType::kLocalNode)
+    .value("GlobalNode", SamplerType::kGlobalNode)
+    .value("RandomWalk", SamplerType::kRandomWalk)
+    .value("GraphSage", SamplerType::kGraphSage);
+
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);
   PyGraph::initBinding(m);

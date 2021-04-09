@@ -93,30 +93,39 @@ int GraphHandle::getServer(node_id idx) {
 }
 
 GraphHandle::~GraphHandle() {
-  for (SamplerPTR sampler: samplers_)
+  for (SamplerPTR &sampler: samplers_)
     sampler->kill();
-  for (SamplerPTR sampler: samplers_)
+  for (SamplerPTR &sampler: samplers_)
     sampler->join();
 }
 
-void GraphHandle::addLocalNodeSampler(size_t batch_size) {
-  if (!graph_queue_.count(SamplerType::kLocalNode)) {
+void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
+  if (!graph_queue_.count(type)) {
     auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(10);
-    graph_queue_.emplace(SamplerType::kLocalNode, std::move(ptr));
+    graph_queue_.emplace(type, std::move(ptr));
   }
-  auto sampler = std::make_shared<LocalNodeSampler>(this, batch_size);
-  samplers_.push_back(sampler);
-  sampler->sample_start();
-}
-
-void GraphHandle::addGlobalNodeSampler(size_t batch_size) {
-  if (!graph_queue_.count(SamplerType::kGlobalNode)) {
-    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(10);
-    graph_queue_.emplace(SamplerType::kGlobalNode, std::move(ptr));
+  SamplerPTR sampler;
+  std::unordered_map<std::string, int> kvs;
+  for (auto item : kwargs) {
+    std::string key = std::string(py::str(item.first));
+    int value = item.second.cast<int>();
+    kvs.emplace(key, value);
   }
-  auto sampler = std::make_shared<GlobalNodeSampler>(this, batch_size);
-  samplers_.push_back(sampler);
+  switch (type)
+  {
+  case SamplerType::kLocalNode:
+    CHECK(kvs.count("batch_size"));
+    sampler = std::make_unique<LocalNodeSampler>(this, kvs["batch_size"]);
+    break;
+  case SamplerType::kGlobalNode:
+    CHECK(kvs.count("batch_size"));
+    sampler = std::make_unique<GlobalNodeSampler>(this, kvs["batch_size"]);
+    break;
+  default:
+    LF << "Sampler Not Implemented";
+  }
   sampler->sample_start();
+  samplers_.push_back(std::move(sampler));
 }
 
 void GraphHandle::push(const GraphMiniBatch &graph, SamplerType type) {
@@ -129,8 +138,7 @@ void GraphHandle::initBinding(py::module &m) {
     .def("init_data", &GraphHandle::initData)
     .def("init_cache", &GraphHandle::initCache)
     .def("get_perf", &GraphHandle::getProfileData)
-    .def("add_local_node_sampler", &GraphHandle::addLocalNodeSampler)
-    .def("add_global_node_sampler", &GraphHandle::addGlobalNodeSampler);
+    .def("add_sampler", &GraphHandle::addSampler);
 }
 
 void GraphHandle::createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app) {

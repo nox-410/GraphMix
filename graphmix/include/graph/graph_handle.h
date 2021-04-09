@@ -34,8 +34,7 @@ public:
   void initCache(double ratio, cache::policy policy);
   auto& getRemote() { return remote_; }
 
-  void addLocalNodeSampler(size_t batch_size);
-  void addGlobalNodeSampler(size_t batch_size);
+  void addSampler(SamplerType type, py::kwargs kwargs);
   py::tuple getProfileData() {
     return py::make_tuple(remote_->cache_miss_cnt_, remote_->nonlocal_cnt_, remote_->total_cnt_);
   }

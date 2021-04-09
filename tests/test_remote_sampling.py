@@ -37,7 +37,7 @@ def server_init(server):
         server.init_cache(1, graphmix.cache.LFU)
     elif graphmix._C.rank() == 2:
         server.init_cache(1, graphmix.cache.LRU)
-    server.add_global_node_sampler(512)
+    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=512)
     graphmix._C.barrier_all()
     graphmix._C.barrier_all()
     print(graphmix._C.rank(), server.get_perf())

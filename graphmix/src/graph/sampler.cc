@@ -5,25 +5,15 @@ namespace ps {
 
 BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this()) {}
 
-void BaseSampler::sample_loop() {
-  while (!killed_) {
-    GraphMiniBatch graph = sample_once();
-    handle_->push(graph, type());
-  }
-  handle_.reset();
-}
-
 void BaseSampler::sample_start() {
-  thread_ = std::thread(&BaseSampler::sample_loop, this);
-}
-
-void BaseSampler::kill() {
-  killed_ = true;
-  thread_.join();
-}
-
-void BaseSampler::join() {
-  thread_.join();
+  auto func = [this] () {
+    while (!killed_) {
+      GraphMiniBatch graph = sample_once();
+      handle_->push(graph, type());
+    }
+    handle_.reset();
+  };
+  thread_ = std::thread(func);
 }
 
 // construct a set of node into a graph

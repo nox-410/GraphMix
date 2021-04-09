@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 import os
 import yaml
+import time
 
 import graphmix
 from graphmix.torch import GCN, mp_matrix
@@ -27,6 +28,7 @@ class Net(torch.nn.Module):
         return x
 
 def worker_main(args):
+    graphmix._C.barrier_all()
     meta = args.meta
     dist.init_process_group(
     	backend='nccl',
@@ -37,20 +39,25 @@ def worker_main(args):
     device = args.local_rank
     torch.cuda.set_device(device)
     model = Net(meta["float_feature"], meta["class"], 128).cuda(device)
-    optimizer = torch.optim.Adam(model.parameters(), 1e-3)
     model = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
+    optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 
     comm = graphmix._C.get_client()
-
+    query = comm.pull_graph()
+    start = time.time()
     for i in range(100):
-        query = comm.pull_graph()
         graph = comm.resolve(query)
+        query = comm.pull_graph()
         x = torch.Tensor(graph.f_feat).to(device)
-        y = torch.Tensor(graph.i_feat[:,0]).to(device, torch.long)
+        y = torch.Tensor(graph.i_feat).to(device, torch.long)
+        label = y[:,0]
         out = model(x, graph)
-        loss = F.cross_entropy(out, y)
-        count = int((out.argmax(axis=1) == y).sum())
-        total = y.shape[0]
+        loss = F.cross_entropy(out, label, reduction='none')
+        loss = loss * y[:,1]
+        loss = loss.mean()
+        eval_mask = y[:,1]==0
+        count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
+        total = eval_mask.sum()
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -63,7 +70,10 @@ def worker_main(args):
             print("epoch={} loss={:.5f} acc={:.5f}".format(i, t[2], t[0]/t[1]))
 
 def server_init(server):
-    server.add_local_node_sampler(256)
+    server.init_cache(1, graphmix.cache.LFUOpt)
+    #server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
+    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
+    graphmix._C.barrier_all()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

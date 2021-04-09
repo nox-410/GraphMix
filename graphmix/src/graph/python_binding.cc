@@ -14,7 +14,12 @@ PYBIND11_MODULE(libc_graphmix, m) {
     if (Postoffice::Get()->van()) return;
     Postoffice::Get()->Start(0, nullptr, false);
     });
-  m.def("finalize", []() { Postoffice::Get()->Finalize(0, true); });
+  m.def("finalize", []() {
+    Postoffice::Get()->Barrier(0, kWorkerGroup + kServerGroup + kScheduler);
+    if (Postoffice::Get()->is_server())
+      StartServer()->stopSampling();
+    Postoffice::Get()->Finalize(0, true);
+  });
 
   m.def("ip", []() { return Postoffice::Get()->van()->my_node().hostname; });
   m.def("port", []() { return Postoffice::Get()->van()->my_node().port; });

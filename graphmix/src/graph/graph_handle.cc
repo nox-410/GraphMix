@@ -170,9 +170,6 @@ std::shared_ptr<GraphHandle> StartServer() {
     auto ptr = std::make_shared<KVApp<GraphHandle>>();
     handle = ptr->getHandler();
     handle->createRemoteHandle(ptr);
-    Postoffice::Get()->RegisterExitCallback([]() {
-      handle->stopSampling();
-    });
   });
   return handle;
 }

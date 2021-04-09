@@ -3,13 +3,19 @@
 
 namespace ps {
 
+sampleState makeSampleState() {
+  return std::make_shared<_sampleState>();
+}
+
 BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this()) {}
 
 void BaseSampler::sample_start() {
   auto func = [this] () {
-    while (!killed_) {
-      GraphMiniBatch graph = sample_once();
-      handle_->push(graph, type());
+    while (true) {
+      sampleState state = handle_->getRemote()->getSampleState(type());
+      if (state->stopSampling)
+        return;
+      sample_once(std::move(state));
     }
     handle_.reset();
   };
@@ -45,29 +51,27 @@ LocalNodeSampler::LocalNodeSampler(GraphHandle *handle, size_t batch_size) : Bas
   batch_size_ = batch_size;
 }
 
-GraphMiniBatch LocalNodeSampler::sample_once() {
+void LocalNodeSampler::sample_once(sampleState state) {
   NodePack node_pack;
   auto nodes = rd_.unique(batch_size_, handle_->nNodes());
   for (node_id node: nodes) {
     node_pack.emplace(node + handle_->offset(), handle_->getNode(node + handle_->offset()));
   }
-  return construct(node_pack);
+  handle_->push(construct(node_pack), type());
 }
 
 GlobalNodeSampler::GlobalNodeSampler(GraphHandle *handle, size_t batch_size) : BaseSampler(handle) {
   batch_size_ = batch_size;
 }
 
-GraphMiniBatch GlobalNodeSampler::sample_once() {
-  sampleState state = handle_->getRemote()->getSampleState(type());
+void GlobalNodeSampler::sample_once(sampleState state) {
   if (state->recvNodes.empty()) {
     // new samples
     auto nodes = rd_.unique(batch_size_, handle_->numGraphNodes());
     for (auto node : nodes) state->query_nodes.emplace(node);
     handle_->getRemote()->queryRemote(std::move(state));
-    return sample_once();
   } else {
-    return construct(state->recvNodes);
+    handle_->push(construct(state->recvNodes), type());
   }
 }
 

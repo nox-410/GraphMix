@@ -92,16 +92,22 @@ int GraphHandle::getServer(node_id idx) {
   return server;
 }
 
-GraphHandle::~GraphHandle() {
+void GraphHandle::stopSampling() {
   for (SamplerPTR &sampler: samplers_)
-    sampler->kill();
+    remote_->pushStopCommand(sampler->type());
+  // Clean the queue so that sampelrs can stop
+  GraphMiniBatch temp;
+  for (auto &queue : graph_queue_) {
+    while(queue.second->try_pop(temp));
+  }
   for (SamplerPTR &sampler: samplers_)
     sampler->join();
+  samplers_.clear();
 }
 
 void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
   if (!graph_queue_.count(type)) {
-    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(10);
+    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(kserverBufferSize);
     graph_queue_.emplace(type, std::move(ptr));
   }
   SamplerPTR sampler;
@@ -158,13 +164,17 @@ void GraphHandle::initCache(double ratio, cache::policy policy) {
 
 std::shared_ptr<GraphHandle> StartServer() {
   CHECK(Postoffice::Get()->is_server());
-  static std::shared_ptr<KVApp<GraphHandle>> ptr;
   static std::once_flag oc;
+  static std::shared_ptr<GraphHandle> handle;
   std::call_once(oc, []() {
-    ptr = std::make_shared<KVApp<GraphHandle>>();
-    ptr->getHandler()->createRemoteHandle(ptr);
+    auto ptr = std::make_shared<KVApp<GraphHandle>>();
+    handle = ptr->getHandler();
+    handle->createRemoteHandle(ptr);
+    Postoffice::Get()->RegisterExitCallback([]() {
+      handle->stopSampling();
+    });
   });
-  return ptr->getHandler();
+  return handle;
 }
 
 } // namespace ps

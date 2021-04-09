@@ -4,13 +4,12 @@ import threading
 import time
 import graphmix
 
-max_thread = 5
+max_thread = 3
 
 def test(args):
+    graphmix._C.barrier_all()
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
-    if rank != 0:
-        return
     comm = graphmix._C.get_client()
     item_count = 0
     def pull_graph():
@@ -34,7 +33,10 @@ def test(args):
     time.sleep(1000)
 
 def server_init(server):
-    server.add_local_node_sampler(128)
+    server.init_cache(1, graphmix.cache.LFUOpt)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=128)
+    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=128)
+    graphmix._C.barrier_all()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

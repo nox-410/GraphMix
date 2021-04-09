@@ -13,7 +13,7 @@ namespace ps {
 class GraphHandle : public std::enable_shared_from_this<GraphHandle> {
 public:
   GraphHandle() {}
-  ~GraphHandle();
+  ~GraphHandle() = default;
 
   void serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response);
   void serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response);
@@ -35,9 +35,11 @@ public:
   auto& getRemote() { return remote_; }
 
   void addSampler(SamplerType type, py::kwargs kwargs);
+  void stopSampling();
   py::tuple getProfileData() {
     return py::make_tuple(remote_->cache_miss_cnt_, remote_->nonlocal_cnt_, remote_->total_cnt_);
   }
+  const static int kserverBufferSize=32;
 private:
 // ---------------------- static node data -------------------------------------
   std::vector<NodeData> nodes_;

@@ -8,8 +8,9 @@ RemoteHandle::RemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app, GraphHandle*
   kvapp_ = app;
   for (int i = 0; i< static_cast<int>(SamplerType::kNumSamplerType); i++) {
     SamplerType tp = static_cast<SamplerType>(i);
-    auto ptr = std::make_unique<rigtorp::MPMCQueue<sampleState>>(256);
+    auto ptr = std::make_unique<ThreadsafeQueue<sampleState>>();
     recv_queue_.emplace(tp, std::move(ptr));
+    on_flight_[i] = 0;
   }
   handle_ = handle->shared_from_this();
 }
@@ -44,7 +45,8 @@ void RemoteHandle::defaultCallback(const sampleState &state) {
   }
   // If we are receiving too much, we will discard them.
   // This is not likely to happen
-  recv_queue_[state->type]->try_push(state);
+  recv_queue_[state->type]->Push(state);
+  on_flight_[static_cast<int>(state->type)]--;
 }
 
 void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys, const PSFData<NodePull>::Response &response) {
@@ -71,18 +73,22 @@ void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys,
   if (wait_num == 1) defaultCallback(state);
 }
 
-sampleState makeSampleState() {
-  return std::make_shared<_sampleState>();
+void RemoteHandle::pushStopCommand(SamplerType type) {
+  auto state = makeSampleState();
+  state->stopSampling = true;
+  recv_queue_[type]->Push(state);
 }
 
 sampleState RemoteHandle::getSampleState(SamplerType type) {
   sampleState state;
   bool success = false;
-  success = recv_queue_[type]->try_pop(state);
+  success = recv_queue_[type]->TryPop(&state);
   if (success) {
     return state;
+  } else if (on_flight_[static_cast<int>(type)] > handle_->kserverBufferSize) {
+    recv_queue_[type]->WaitAndPop(&state);
+    return state;
   } else {
-    // TODO: add control here
     state = makeSampleState();
     state->type = type;
     return state;
@@ -92,6 +98,7 @@ sampleState RemoteHandle::getSampleState(SamplerType type) {
 void RemoteHandle::queryRemote(sampleState state) {
   CHECK(state != nullptr);
   CHECK(state->wait_num == 0);
+  on_flight_[static_cast<int>(state->type)]++;
   state->recvNodes.clear();
   filterNode(state);
   int nserver = Postoffice::Get()->num_servers();

@@ -13,22 +13,34 @@ enum class SamplerType {
   kNumSamplerType,
 };
 
+class _sampleState {
+public:
+  std::mutex mtx;
+  int wait_num;
+  std::unordered_set<node_id> query_nodes;
+  NodePack recvNodes;
+  SamplerType type;
+  bool stopSampling = false;
+};
+
+typedef std::shared_ptr<_sampleState> sampleState;
+
+sampleState makeSampleState();
+
 class GraphHandle;
 
 class BaseSampler {
 public:
   BaseSampler(GraphHandle *handle);
   void sample_start();
-  void kill() { killed_ = true; }
   void join() { thread_.join(); }
   virtual ~BaseSampler() = default;
   virtual SamplerType type() = 0;
 protected:
   std::shared_ptr<GraphHandle> handle_;
   GraphMiniBatch construct(const NodePack &node_pack);
-  virtual GraphMiniBatch sample_once() = 0;
+  virtual void sample_once(sampleState) = 0;
 private:
-  bool killed_ = false;
   std::thread thread_;
 };
 
@@ -37,7 +49,7 @@ typedef std::unique_ptr<BaseSampler> SamplerPTR;
 class LocalNodeSampler : public BaseSampler {
 public:
   LocalNodeSampler(GraphHandle *handle, size_t batch_size);
-  GraphMiniBatch sample_once();
+  void sample_once(sampleState);
   SamplerType type() { return SamplerType::kLocalNode; }
 private:
   RandomIndexSelecter rd_;
@@ -47,7 +59,7 @@ private:
 class GlobalNodeSampler : public BaseSampler {
 public:
   GlobalNodeSampler(GraphHandle *handle, size_t batch_size);
-  GraphMiniBatch sample_once();
+  void sample_once(sampleState);
   SamplerType type() { return SamplerType::kGlobalNode; }
 private:
   RandomIndexSelecter rd_;

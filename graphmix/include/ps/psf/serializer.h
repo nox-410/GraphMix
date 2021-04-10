@@ -24,7 +24,7 @@ public:
   static void encode(const Tuple &tup, vector<SArray<char>> &target) {
     if constexpr (N > 0) {
       auto &t = std::get<N-1>(tup);
-      typedef typename std::remove_reference<decltype(t)>::type dtype;
+      typedef typename std::decay<decltype(t)>::type dtype;
       if constexpr (isScalar<dtype>::value) {
         // encode scalar type, put it in target[0]
         size_t cur_size = target[0].size();
@@ -45,7 +45,7 @@ public:
     // When decode, from front to back
     if constexpr (N > 0) {
       auto &t = std::get<std::tuple_size<Tuple>::value - N>(tup);
-      typedef typename std::remove_reference<decltype(t)>::type dtype;
+      typedef typename std::decay<decltype(t)>::type dtype;
       if constexpr (isScalar<dtype>::value) {
         dtype* ptr = reinterpret_cast<dtype*>(target[0].data() + scalar_hint - sizeof(dtype));
         t = *ptr;

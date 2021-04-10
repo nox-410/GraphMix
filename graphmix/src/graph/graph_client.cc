@@ -6,7 +6,9 @@ int GraphClient::getserver(node_id idx) {
   return server;
 }
 
-GraphClient::GraphClient() : _kvworker() {}
+GraphClient::GraphClient() {
+  kvapp_ = std::make_unique<KVApp<EmptyHandler>>();
+}
 
 GraphClient::query_t
 GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {
@@ -50,7 +52,7 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
       }
     };
     auto cb = std::bind(callback, std::placeholders::_1, std::ref(nodes));
-    int ts = _kvworker.Request<NodePull>(request, cb, server);
+    int ts = kvapp_->Request<NodePull>(request, cb, server);
     timestamps.push_back(ts);
   }
   return cur_query;
@@ -71,7 +73,7 @@ GraphClient::pullGraph() {
     graph->setFeature(std::get<0>(response), std::get<1>(response));
     graph_map_[cur_query] = graph;
   };
-  auto ts = _kvworker.Request<GraphPull>(request, cb, meta_.rank);
+  auto ts = kvapp_->Request<GraphPull>(request, cb, meta_.rank);
   timestamps.push_back(ts);
   return cur_query;
 }

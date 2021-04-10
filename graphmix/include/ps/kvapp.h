@@ -23,6 +23,10 @@ public:
       std::bind(&KVApp::_process, this, std::placeholders::_1)
     ));
   }
+  ~KVApp() {
+    // Free customer first, so that recv threads can end safely
+    customer_.reset();
+  }
   void Wait(int timestamp) { customer_->WaitRequest(timestamp); }
   template<PsfType ftype, typename CallBack>
   int Request(const typename PSFData<ftype>::Request &request, const CallBack &cb, int target_server_id) {

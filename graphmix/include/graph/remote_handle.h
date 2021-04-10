@@ -13,7 +13,7 @@ class GraphHandle;
 
 class RemoteHandle {
 public:
-  RemoteHandle(std::shared_ptr<KVApp<GraphHandle>>, GraphHandle*);
+  RemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &, GraphHandle*);
   void initCache(size_t, cache::policy);
   void queryRemote(sampleState state);
   void pushStopCommand(SamplerType);

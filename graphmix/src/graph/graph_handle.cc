@@ -6,6 +6,7 @@
 namespace ps {
 
 void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response) {
+  //std::this_thread::sleep_for(std::chrono::milliseconds(100));
   auto keys = get<0>(request);
   if (keys.empty()) return;
   size_t n = keys.size();
@@ -147,7 +148,7 @@ void GraphHandle::initBinding(py::module &m) {
     .def("add_sampler", &GraphHandle::addSampler);
 }
 
-void GraphHandle::createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app) {
+void GraphHandle::createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app) {
   CHECK(app != nullptr);
   remote_ = std::make_unique<RemoteHandle>(app, this);
 }
@@ -167,7 +168,7 @@ std::shared_ptr<GraphHandle> StartServer() {
   static std::once_flag oc;
   static std::shared_ptr<GraphHandle> handle;
   std::call_once(oc, []() {
-    auto ptr = std::make_shared<KVApp<GraphHandle>>();
+    auto ptr = std::make_unique<KVApp<GraphHandle>>();
     handle = ptr->getHandler();
     handle->createRemoteHandle(ptr);
   });

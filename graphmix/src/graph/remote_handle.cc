@@ -3,9 +3,9 @@
 
 namespace ps {
 
-RemoteHandle::RemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app, GraphHandle* handle) {
+RemoteHandle::RemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app, GraphHandle* handle) {
   CHECK(app);
-  kvapp_ = app;
+  kvapp_ = std::move(app);
   for (int i = 0; i< static_cast<int>(SamplerType::kNumSamplerType); i++) {
     SamplerType tp = static_cast<SamplerType>(i);
     auto ptr = std::make_unique<ThreadsafeQueue<sampleState>>();

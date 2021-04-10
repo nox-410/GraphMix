@@ -30,7 +30,7 @@ public:
   NodeData getNode(node_id idx) { return nodes_[idx - local_offset_]; }
   bool isLocalNode(node_id idx) { return idx >= local_offset_ && idx < local_offset_ + num_local_nodes_; }
   int getServer(node_id idx);
-  void createRemoteHandle(std::shared_ptr<KVApp<GraphHandle>> app);
+  void createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app);
   void initCache(double ratio, cache::policy policy);
   auto& getRemote() { return remote_; }
 

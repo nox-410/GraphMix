@@ -16,7 +16,6 @@ def test(args):
         while True:
             query = comm.pull_graph()
             graph = comm.resolve(query)
-            print(graph.tag)
             nonlocal item_count
             item_count += graph.num_nodes
 
@@ -36,7 +35,7 @@ def test(args):
 def server_init(server):
     server.init_cache(1, graphmix.cache.LFUOpt)
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=128)
-    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=128)
+    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=128, rw_length=2)
     graphmix._C.barrier_all()
 
 if __name__ =='__main__':

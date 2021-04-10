@@ -52,6 +52,7 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<Grap
   std::get<1>(response) = result.i_feat;
   std::get<2>(response) = result.csr_i;
   std::get<3>(response) = result.csr_j;
+  std::get<5>(response) = result.extra;
 }
 
 void GraphHandle::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset) {
@@ -138,6 +139,12 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
     CHECK(kvs.count("rw_head"));
     CHECK(kvs.count("rw_length"));
     sampler = std::make_unique<RandomWalkSampler>(this, kvs["rw_head"], kvs["rw_length"]);
+    break;
+  case SamplerType::kGraphSage:
+    CHECK(kvs.count("batch_size"));
+    CHECK(kvs.count("depth"));
+    CHECK(kvs.count("width"));
+    sampler = std::make_unique<GraphSageSampler>(this, kvs["batch_size"], kvs["depth"], kvs["width"]);
     break;
   default:
     LF << "Sampler Not Implemented";

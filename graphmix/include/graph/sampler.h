@@ -29,6 +29,13 @@ public:
   size_t rw_round = 0;
 };
 
+class _graphSageState : public _sampleState {
+public:
+  std::unordered_set<node_id> frontier;
+  std::unordered_set<node_id> core_node;
+  size_t expand_round = 0;
+};
+
 typedef std::shared_ptr<_sampleState> sampleState;
 
 sampleState makeSampleState(SamplerType);
@@ -54,7 +61,8 @@ typedef std::unique_ptr<BaseSampler> SamplerPTR;
 
 class LocalNodeSampler : public BaseSampler {
 public:
-  LocalNodeSampler(GraphHandle *handle, size_t batch_size);
+  LocalNodeSampler(GraphHandle *handle, size_t batch_size)
+  : BaseSampler(handle), batch_size_(batch_size) {}
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kLocalNode; }
 private:
@@ -64,7 +72,8 @@ private:
 
 class GlobalNodeSampler : public BaseSampler {
 public:
-  GlobalNodeSampler(GraphHandle *handle, size_t batch_size);
+  GlobalNodeSampler(GraphHandle *handle, size_t batch_size)
+  : BaseSampler(handle), batch_size_(batch_size) {}
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kGlobalNode; }
 private:
@@ -84,14 +93,19 @@ private:
   size_t rw_length_;
 };
 
-// class GraphSageSampler : public BaseSampler {
-// public:
-//   GraphSageSampler(GraphHandle *handle, size_t batch_size, int depth, int width);
-//   GraphMiniBatch sample_once();
-//   SamplerType type() { return SamplerType::kGraphSage; }
-// private:
-//   RandomIndexSelecter rd_;
-//   size_t batch_size_;
-// };
+class GraphSageSampler : public BaseSampler {
+public:
+  GraphSageSampler(GraphHandle *handle, size_t batch_size, size_t depth, size_t width, size_t train_mask_index=1)
+   : BaseSampler(handle), batch_size_(batch_size), depth_(depth), width_(width)
+   { try_build_index(train_mask_index); }
+  void sample_once(sampleState);
+  SamplerType type() { return SamplerType::kGraphSage; }
+private:
+  RandomIndexSelecter rd_;
+  size_t batch_size_;
+  size_t depth_, width_;
+  static std::vector<node_id> train_index;
+  void try_build_index(size_t);
+};
 
 }

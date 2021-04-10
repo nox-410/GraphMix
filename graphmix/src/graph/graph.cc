@@ -38,6 +38,19 @@ py::array_t<graph_int> PyGraph::getIntFeat() {
   return result;
 }
 
+py::array_t<graph_int> PyGraph::getExtra() {
+  py::array_t<graph_int> result = binding::svec_nocp(extra_);
+  size_t extra_len = extra_.size() / nNodes();
+  result.resize({nNodes(), extra_len});
+  return result;
+}
+
+void PyGraph::setExtra(SArray<graph_int> extra) {
+  if (extra.size() % nNodes() != 0)
+    throw std::invalid_argument("extra size not met");
+  extra_ = extra;
+}
+
 void PyGraph::setFeature(SArray<graph_float> f_feat, SArray<graph_int> i_feat) {
   if (f_feat.size() % nNodes() != 0 || i_feat.size() % nNodes() != 0)
     throw std::invalid_argument("feature length not met");
@@ -283,6 +296,7 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
     .def_property_readonly("i_feat", &PyGraph::getIntFeat)
     .def_property_readonly("tag", &PyGraph::getTag)
+    .def_property_readonly("extra", &PyGraph::getExtra)
     .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
     .def("partition", &PyGraph::PyPartition)
     .def("gcn_norm", &PyGraph::gcnNorm)

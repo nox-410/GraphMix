@@ -23,6 +23,7 @@ struct GraphMiniBatch {
   SArray<graph_float> f_feat;
   SArray<graph_int> i_feat;
   SArray<node_id> csr_i, csr_j;
+  SArray<graph_int> extra;
 };
 
 struct GraphMetaData {

@@ -71,7 +71,7 @@ def worker_main(args):
         label = y[:,0]
         out = model(x, graph)
         loss = F.cross_entropy(out, label, reduction='none')
-        loss = loss * y[:,1]
+        loss = loss * (y[:,1]==1)
         loss = loss.mean()
         eval_mask = y[:,1]==0
         count = int(((out.argmax(axis=1) == label)*eval_mask).sum())

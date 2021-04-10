@@ -20,11 +20,12 @@ template<> struct PSFData<NodePull> {
 template<> struct PSFData<GraphPull> {
   using Request = tuple<>;
   using Response = tuple<
-    SArray<graph_float>,
-    SArray<graph_int>,
-    SArray<node_id>,
-    SArray<node_id>,
-    int // tag
+    SArray<graph_float>, // float feature
+    SArray<graph_int>, // int feature
+    SArray<node_id>, // csr-format graph
+    SArray<node_id>, // csr-foramt graph
+    int, // tag
+    SArray<graph_int> // extra data
   >;
 };
 

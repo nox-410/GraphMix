@@ -5,8 +5,10 @@ namespace ps {
 
 sampleState makeSampleState(SamplerType type) {
   sampleState state;
-  if (type==SamplerType::kRandomWalk) {
+  if (type == SamplerType::kRandomWalk) {
     state = std::make_shared<_randomWalkState>();
+  } else if (type == SamplerType::kGraphSage) {
+    state = std::make_shared<_graphSageState>();
   } else {
     state = std::make_shared<_sampleState>();
   }
@@ -55,10 +57,6 @@ GraphMiniBatch BaseSampler::construct(const NodePack &node_pack) {
   return graph;
 }
 
-LocalNodeSampler::LocalNodeSampler(GraphHandle *handle, size_t batch_size) : BaseSampler(handle) {
-  batch_size_ = batch_size;
-}
-
 void LocalNodeSampler::sample_once(sampleState state) {
   NodePack node_pack;
   auto nodes = rd_.unique(batch_size_, handle_->nNodes());
@@ -66,10 +64,6 @@ void LocalNodeSampler::sample_once(sampleState state) {
     node_pack.emplace(node + handle_->offset(), handle_->getNode(node + handle_->offset()));
   }
   handle_->push(construct(node_pack), type());
-}
-
-GlobalNodeSampler::GlobalNodeSampler(GraphHandle *handle, size_t batch_size) : BaseSampler(handle) {
-  batch_size_ = batch_size;
 }
 
 void GlobalNodeSampler::sample_once(sampleState state) {
@@ -90,7 +84,7 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
     handle_->push(construct(state->recvNodes), type());
     return;
   }
-  if (state->frontier.empty()) {
+  if (state->rw_round == 0) {
     // Start a new sample
     auto nodes = rd_.unique(rw_head_, handle_->nNodes());
     for (node_id node: nodes) {
@@ -102,7 +96,9 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
   auto new_frontier = decltype(state->frontier)();
   state->query_nodes.clear();
   for (node_id node : state->frontier) {
-    auto rd = rd_.randInt(state->recvNodes[node]->edge.size());
+    size_t num_neighbor = state->recvNodes[node]->edge.size();
+    if (num_neighbor == 0) continue;
+    auto rd = rd_.randInt(num_neighbor);
     node_id nxt_node = state->recvNodes[node]->edge[rd];
     if (!state->recvNodes.count(nxt_node))
       state->query_nodes.emplace(nxt_node);
@@ -113,4 +109,64 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
   handle_->getRemote()->queryRemote(std::move(state));
 }
 
+void GraphSageSampler::sample_once(sampleState state_base) {
+  auto state = std::static_pointer_cast<_graphSageState>(state_base);
+  if (state->expand_round == depth_) {
+    // if ready
+    auto graph = construct(state->recvNodes);
+    graph.extra.reserve(state->recvNodes.size());
+    for (auto &node : state->recvNodes) {
+      if (state->core_node.count(node.first)) {
+        graph.extra.push_back(1);
+      } else {
+        graph.extra.push_back(0);
+      }
+    }
+    handle_->push(graph, type());
+    return;
+  }
+  if (state->expand_round == 0) {
+    // Start a new sample
+    auto nodes = rd_.unique(batch_size_, train_index.size());
+    for (node_id node: nodes) {
+      state->frontier.emplace(train_index[node]);
+      state->recvNodes.emplace(train_index[node], handle_->getNode(train_index[node]));
+    }
+  }
+
+  // select neighbor for frontier
+  auto new_frontier = decltype(state->frontier)();
+  state->query_nodes.clear();
+  for (node_id node : state->frontier) {
+    for (size_t i = 0; i < width_; i++) {
+      size_t num_neighbor = state->recvNodes[node]->edge.size();
+      if (num_neighbor == 0) continue;
+      auto rd = rd_.randInt(num_neighbor);
+      node_id nxt_node = state->recvNodes[node]->edge[rd];
+      if (!state->recvNodes.count(nxt_node))
+        state->query_nodes.emplace(nxt_node);
+      new_frontier.emplace(nxt_node);
+    }
+  }
+
+  if (state->expand_round == 0) state->core_node = std::move(state->frontier);
+  state->frontier = std::move(new_frontier);
+  state->expand_round++;
+  handle_->getRemote()->queryRemote(std::move(state));
 }
+
+void GraphSageSampler::try_build_index(size_t index) {
+  if (!train_index.empty()) return;
+  CHECK(index >= 0 && index < handle_->iLen());
+  for (node_id i = handle_->offset(); i < handle_->offset() + handle_->nNodes(); i++) {
+    if (handle_->getNode(i)->i_feat[index] == 1) {
+      train_index.push_back(i);
+    }
+  }
+  CHECK(train_index.size() >= batch_size_)
+    << "GraphSage index build fails train_index < batch_size " << train_index.size() << "<" << batch_size_;
+}
+
+std::vector<node_id> GraphSageSampler::train_index;
+
+} // namespace ps

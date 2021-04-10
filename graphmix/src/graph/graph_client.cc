@@ -71,6 +71,7 @@ GraphClient::pullGraph() {
     auto &csr_j = std::get<3>(response);
     auto graph = std::make_shared<PyGraph>(csr_i, csr_j, csr_i.size() - 1, "csr");
     graph->setFeature(std::get<0>(response), std::get<1>(response));
+    graph->setTag(std::get<4>(response));
     graph_map_[cur_query] = graph;
   };
   auto ts = kvapp_->Request<GraphPull>(request, cb, meta_.rank);

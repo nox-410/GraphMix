@@ -16,6 +16,7 @@ def test(args):
         while True:
             query = comm.pull_graph()
             graph = comm.resolve(query)
+            print(graph.tag)
             nonlocal item_count
             item_count += graph.num_nodes
 

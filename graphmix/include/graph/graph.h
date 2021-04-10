@@ -5,6 +5,7 @@
 #include "common/binding.h"
 #include "common/sarray.h"
 #include "graph/graph_type.h"
+#include "graph/sampler.h"
 
 class PyGraph {
 private:
@@ -13,6 +14,7 @@ private:
   SArray<graph_float> f_feat_;
   SArray<graph_int> i_feat_;
   std::string format_="coo";
+  ps::SamplerType tag_ = ps::SamplerType::kNumSamplerType;
 public:
   PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes, std::string format="coo");
   ~PyGraph() {}
@@ -25,6 +27,8 @@ public:
   py::array_t<graph_float> getFloatFeat();
   py::array_t<graph_int> getIntFeat();
   void setFeature(SArray<graph_float>, SArray<graph_int>);
+  void setTag(int tag) { tag_ = static_cast<ps::SamplerType>(tag); }
+  auto getTag() { return tag_; }
 
   //Graph common API
   void addSelfLoop();

@@ -38,10 +38,16 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<Grap
   bool success = false;
   for (auto &queue : graph_queue_) {
     success = queue.second->try_pop(result);
-    if (success) break;
+    if (success) {
+      std::get<4>(response) = static_cast<int>(queue.first);
+      break;
+    }
   }
   // If all samplers are not ready, use the one with lowest priority
-  if (!success) graph_queue_.rbegin()->second->pop(result);
+  if (!success) {
+    graph_queue_.rbegin()->second->pop(result);
+    std::get<4>(response) = static_cast<int>(graph_queue_.rbegin()->first);
+  }
   std::get<0>(response) = result.f_feat;
   std::get<1>(response) = result.i_feat;
   std::get<2>(response) = result.csr_i;

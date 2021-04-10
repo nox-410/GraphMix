@@ -282,6 +282,7 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("format", &PyGraph::getFormat)
     .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
     .def_property_readonly("i_feat", &PyGraph::getIntFeat)
+    .def_property_readonly("tag", &PyGraph::getTag)
     .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
     .def("partition", &PyGraph::PyPartition)
     .def("gcn_norm", &PyGraph::gcnNorm)

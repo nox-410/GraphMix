@@ -23,7 +23,8 @@ template<> struct PSFData<GraphPull> {
     SArray<graph_float>,
     SArray<graph_int>,
     SArray<node_id>,
-    SArray<node_id>
+    SArray<node_id>,
+    int // tag
   >;
 };
 

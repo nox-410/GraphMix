@@ -54,7 +54,8 @@ PYBIND11_MODULE(libc_graphmix, m) {
     .value("LocalNode", SamplerType::kLocalNode)
     .value("GlobalNode", SamplerType::kGlobalNode)
     .value("RandomWalk", SamplerType::kRandomWalk)
-    .value("GraphSage", SamplerType::kGraphSage);
+    .value("GraphSage", SamplerType::kGraphSage)
+    .value("None", SamplerType::kNumSamplerType);
 
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);

@@ -74,7 +74,7 @@ void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys,
 }
 
 void RemoteHandle::pushStopCommand(SamplerType type) {
-  auto state = makeSampleState();
+  auto state = makeSampleState(type);
   state->stopSampling = true;
   recv_queue_[type]->Push(state);
 }
@@ -89,8 +89,7 @@ sampleState RemoteHandle::getSampleState(SamplerType type) {
     recv_queue_[type]->WaitAndPop(&state);
     return state;
   } else {
-    state = makeSampleState();
-    state->type = type;
+    state = makeSampleState(type);
     return state;
   }
 }
@@ -99,7 +98,6 @@ void RemoteHandle::queryRemote(sampleState state) {
   CHECK(state != nullptr);
   CHECK(state->wait_num == 0);
   on_flight_[static_cast<int>(state->type)]++;
-  state->recvNodes.clear();
   filterNode(state);
   int nserver = Postoffice::Get()->num_servers();
   std::vector<SArray<node_id>> keys(nserver);
@@ -122,7 +120,7 @@ void RemoteHandle::queryRemote(sampleState state) {
 
 void RemoteHandle::filterNode(sampleState &state) {
   size_t local_cnt = 0;
-  state->recvNodes.reserve(state->query_nodes.size());
+  state->recvNodes.reserve(state->recvNodes.size() + state->query_nodes.size());
   for (auto iter=state->query_nodes.begin(); iter != state->query_nodes.end();) {
     node_id node = *iter;
     if (handle_->isLocalNode(node)) {

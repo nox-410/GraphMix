@@ -3,8 +3,15 @@
 
 namespace ps {
 
-sampleState makeSampleState() {
-  return std::make_shared<_sampleState>();
+sampleState makeSampleState(SamplerType type) {
+  sampleState state;
+  if (type==SamplerType::kRandomWalk) {
+    state = std::make_shared<_randomWalkState>();
+  } else {
+    state = std::make_shared<_sampleState>();
+  }
+  state->type = type;
+  return state;
 }
 
 BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this()) {}
@@ -13,6 +20,7 @@ void BaseSampler::sample_start() {
   auto func = [this] () {
     while (true) {
       sampleState state = handle_->getRemote()->getSampleState(type());
+      CHECK(state->type == type());
       if (state->stopSampling)
         return;
       sample_once(std::move(state));
@@ -73,6 +81,36 @@ void GlobalNodeSampler::sample_once(sampleState state) {
   } else {
     handle_->push(construct(state->recvNodes), type());
   }
+}
+
+void RandomWalkSampler::sample_once(sampleState state_base) {
+  auto state = std::static_pointer_cast<_randomWalkState>(state_base);
+  if (state->rw_round == rw_length_) {
+    // if ready
+    handle_->push(construct(state->recvNodes), type());
+    return;
+  }
+  if (state->frontier.empty()) {
+    // Start a new sample
+    auto nodes = rd_.unique(rw_head_, handle_->nNodes());
+    for (node_id node: nodes) {
+      state->frontier.emplace(node + handle_->offset());
+      state->recvNodes.emplace(node + handle_->offset(), handle_->getNode(node + handle_->offset()));
+    }
+  }
+  // select neighbor for frontier
+  auto new_frontier = decltype(state->frontier)();
+  state->query_nodes.clear();
+  for (node_id node : state->frontier) {
+    auto rd = rd_.randInt(state->recvNodes[node]->edge.size());
+    node_id nxt_node = state->recvNodes[node]->edge[rd];
+    if (!state->recvNodes.count(nxt_node))
+      state->query_nodes.emplace(nxt_node);
+    new_frontier.emplace(nxt_node);
+  }
+  state->frontier = std::move(new_frontier);
+  state->rw_round++;
+  handle_->getRemote()->queryRemote(std::move(state));
 }
 
 }

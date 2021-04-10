@@ -48,14 +48,20 @@ def worker_main(args):
 
     from graphmix.dataset import load_dataset
     dataset = load_dataset("Cora")
+    best_result = 0
     def eval_data():
-        x = torch.Tensor(dataset.x).to(device)
-        label = torch.Tensor(dataset.y).to(device, torch.long)
-        out = model(x, dataset.graph)
-        eval_mask = torch.Tensor(dataset.train_mask==0).to(device)
-        count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
-        total = eval_mask.sum()
-        print(float(count/total))
+        nonlocal best_result
+        with torch.no_grad():
+            model.eval()
+            x = torch.Tensor(dataset.x).to(device)
+            label = torch.Tensor(dataset.y).to(device, torch.long)
+            out = model(x, dataset.graph)
+            eval_mask = torch.Tensor(dataset.train_mask==0).to(device)
+            count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
+            total = eval_mask.sum()
+            best_result = max(best_result, float(count/total))
+            print(float(count/total), best_result)
+            model.train()
 
     for i in range(100):
         graph = comm.resolve(query)
@@ -83,9 +89,10 @@ def worker_main(args):
             eval_data()
 
 def server_init(server):
-    server.init_cache(1, graphmix.cache.LFUOpt)
+    #server.init_cache(1, graphmix.cache.LFUOpt)
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
-    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=1000)
+    #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=256, rw_length=2)
+    #server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
     graphmix._C.barrier_all()
 
 if __name__ =='__main__':

@@ -23,9 +23,15 @@ public:
   bool stopSampling = false;
 };
 
+class _randomWalkState : public _sampleState {
+public:
+  std::unordered_set<node_id> frontier;
+  size_t rw_round = 0;
+};
+
 typedef std::shared_ptr<_sampleState> sampleState;
 
-sampleState makeSampleState();
+sampleState makeSampleState(SamplerType);
 
 class GraphHandle;
 
@@ -64,6 +70,18 @@ public:
 private:
   RandomIndexSelecter rd_;
   size_t batch_size_;
+};
+
+class RandomWalkSampler : public BaseSampler {
+public:
+  RandomWalkSampler(GraphHandle *handle, size_t rw_head, size_t rw_length)
+   : BaseSampler(handle), rw_head_(rw_head), rw_length_(rw_length) {}
+  void sample_once(sampleState);
+  SamplerType type() { return SamplerType::kRandomWalk; }
+private:
+  RandomIndexSelecter rd_;
+  size_t rw_head_;
+  size_t rw_length_;
 };
 
 // class GraphSageSampler : public BaseSampler {

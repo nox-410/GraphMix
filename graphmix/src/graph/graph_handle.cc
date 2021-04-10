@@ -134,6 +134,11 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
     CHECK(kvs.count("batch_size"));
     sampler = std::make_unique<GlobalNodeSampler>(this, kvs["batch_size"]);
     break;
+  case SamplerType::kRandomWalk:
+    CHECK(kvs.count("rw_head"));
+    CHECK(kvs.count("rw_length"));
+    sampler = std::make_unique<RandomWalkSampler>(this, kvs["rw_head"], kvs["rw_length"]);
+    break;
   default:
     LF << "Sampler Not Implemented";
   }

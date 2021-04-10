@@ -45,6 +45,18 @@ def worker_main(args):
     comm = graphmix._C.get_client()
     query = comm.pull_graph()
     start = time.time()
+
+    from graphmix.dataset import load_dataset
+    dataset = load_dataset("Cora")
+    def eval_data():
+        x = torch.Tensor(dataset.x).to(device)
+        label = torch.Tensor(dataset.y).to(device, torch.long)
+        out = model(x, dataset.graph)
+        eval_mask = torch.Tensor(dataset.train_mask==0).to(device)
+        count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
+        total = eval_mask.sum()
+        print(float(count/total))
+
     for i in range(100):
         graph = comm.resolve(query)
         query = comm.pull_graph()
@@ -68,11 +80,12 @@ def worker_main(args):
         dist.all_reduce(t, op=torch.distributed.ReduceOp.SUM)
         if dist.get_rank() == 0:
             print("epoch={} loss={:.5f} acc={:.5f}".format(i, t[2], t[0]/t[1]))
+            eval_data()
 
 def server_init(server):
     server.init_cache(1, graphmix.cache.LFUOpt)
-    #server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
-    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
+    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=1000)
     graphmix._C.barrier_all()
 
 if __name__ =='__main__':

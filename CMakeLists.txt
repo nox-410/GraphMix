@@ -27,3 +27,6 @@ ADD_TEST(NAME basic_sample COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/test_base_s
     --config ${CMAKE_SOURCE_DIR}/config/test_config.yml)
 ADD_TEST(NAME remote_sample COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/test_remote_sampling.py
     --config ${CMAKE_SOURCE_DIR}/config/test_config.yml)
+
+add_custom_target(test_data COMMAND
+    python3 ${CMAKE_SOURCE_DIR}/python/utils/part_graph.py -d Cora -n 4 --nodeid -p ${CMAKE_SOURCE_DIR}/data)

@@ -7,9 +7,7 @@ import yaml
 from graphmix.dataset import load_dataset
 
 def part_graph(dataset_name, nparts, output_path):
-    if os.path.exists(output_path):
-        os.rmdir(output_path)
-    os.mkdir(output_path)
+    os.makedirs(os.path.expanduser(os.path.normpath(output_path)))
     start = time.time()
     dataset = load_dataset(dataset_name)
     print("step1: load_dataset complete, time cost {:.3f}s".format(time.time()-start))

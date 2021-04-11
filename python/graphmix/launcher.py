@@ -83,8 +83,8 @@ def launcher(target, args, server_init=None):
         proc = multiprocessing.Process(target=start_scheduler)
         process_list.append(proc)
 
-    signal.signal(signal.SIGINT, signal_handler)
     for proc in process_list:
         proc.start()
+    signal.signal(signal.SIGINT, signal_handler)
     for proc in process_list:
         proc.join()

@@ -42,8 +42,13 @@ class ZMQVan : public Van {
       CHECK(context_ != NULL) << "create 0mq context failed";
       zmq_ctx_set(context_, ZMQ_MAX_SOCKETS, 65536);
     }
+    int zmq_threads = 1;
+    if (Postoffice::Get()->is_worker())
+      zmq_threads = GetEnv("ZMQ_WORKER_THREAD", 1);
+    else if (Postoffice::Get()->is_server())
+      zmq_threads = GetEnv("ZMQ_SERVER_THREAD", 8);
+    zmq_ctx_set(context_, ZMQ_IO_THREADS, zmq_threads);
     start_mu_.unlock();
-    // zmq_ctx_set(context_, ZMQ_IO_THREADS, 4);
     Van::Start(customer_id);
   }
 

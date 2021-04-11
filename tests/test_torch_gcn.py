@@ -65,20 +65,25 @@ def worker_main(args):
 
     for i in range(100):
         graph = comm.resolve(query)
+        graph.add_self_loop()
         query = comm.pull_graph()
         x = torch.Tensor(graph.f_feat).to(device)
         y = torch.Tensor(graph.i_feat).to(device, torch.long)
+        if graph.tag == graphmix.sampler.GraphSage:
+            train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
+        else:
+            train_mask = y[:,1]==1
         label = y[:,0]
         out = model(x, graph)
         loss = F.cross_entropy(out, label, reduction='none')
-        loss = loss * (y[:,1]==1)
+        loss = loss * train_mask
         loss = loss.mean()
-        eval_mask = y[:,1]==0
-        count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
-        total = eval_mask.sum()
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
+        eval_mask = y[:,1]==0
+        count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
+        total = eval_mask.sum()
 
         # all-reduce train stats
         t = torch.tensor([count, total, float(loss) / dist.get_world_size()], dtype=torch.float64, device='cuda')
@@ -90,7 +95,8 @@ def worker_main(args):
 
 def server_init(server):
     #server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
+    #server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=16, depth=2, width=2)
     #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=256, rw_length=2)
     #server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
     graphmix._C.barrier_all()

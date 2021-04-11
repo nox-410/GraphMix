@@ -4,7 +4,7 @@ import threading
 import time
 import graphmix
 
-max_thread = 3
+max_thread = 1
 
 def test(args):
     graphmix._C.barrier_all()
@@ -33,9 +33,10 @@ def test(args):
     time.sleep(1000)
 
 def server_init(server):
-    server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.LocalNode, batch_size=128)
-    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=128, rw_length=2)
+    #server.init_cache(1, graphmix.cache.LFUOpt)
+    for i in range(args.num_local_worker):
+        server.add_sampler(graphmix.sampler.LocalNode, batch_size=500)
+    #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=128, rw_length=2)
     graphmix._C.barrier_all()
 
 if __name__ =='__main__':

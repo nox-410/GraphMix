@@ -172,13 +172,13 @@ void GraphHandle::createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app) {
 }
 
 void GraphHandle::initCache(double ratio, cache::policy policy) {
-  CHECK(num_local_nodes_ != 0);
-  size_t cache_size = size_t(ratio * num_local_nodes_);
-  if (cache_size > meta_.num_nodes - num_local_nodes_) {
-    cache_size = meta_.num_nodes - num_local_nodes_;
-    LG << "Server cache set limit too large " << cache_size;
+  CHECK(num_local_nodes_ != 0) << "Data not ready.";
+  ratio = std::min(ratio, 1.0);
+  ratio = std::max(ratio, 0.0);
+  size_t cache_size = size_t(ratio * (meta_.num_nodes - num_local_nodes_));
+  if (cache_size > 0) {
+    remote_->initCache(cache_size, policy);
   }
-  remote_->initCache(cache_size, policy);
 }
 
 std::shared_ptr<GraphHandle> StartServer() {

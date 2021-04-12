@@ -3,6 +3,7 @@ import pickle
 import os
 import ssl
 from six.moves import urllib
+import zipfile
 
 def download_url(url, folder):
     """Downloads the content of an URL to a specific folder.
@@ -26,6 +27,15 @@ def download_url(url, folder):
         f.write(data.read())
     print("Downloaded", path)
     return path
+
+def extract_zip(path, folder):
+    """Extracts a zip archive to a specific folder.
+    Args:
+        path (string): The path to the tar archive.
+        folder (string): The folder.
+    """
+    with zipfile.ZipFile(path, 'r') as f:
+        f.extractall(folder)
 
 def process_graph(graph_dict):
     row, col = [], []

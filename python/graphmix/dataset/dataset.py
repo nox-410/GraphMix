@@ -2,9 +2,10 @@ import libc_graphmix as _C
 
 import os
 import numpy as np
+import scipy.sparse as sp
 import pickle
 
-from .utils import download_url, process_graph
+from .utils import download_url, process_graph, extract_zip
 
 # class PlanetoidDataset():
 #     def __init__(self, root, name):
@@ -57,19 +58,43 @@ class PlanetoidDataset():
         # self.mask[-1000:0] = 2 # test
         self.num_classes = y.shape[1]
 
+# class RedditDataset():
+#     def __init__(self, root):
+#         from torch_geometric.datasets import Reddit
+#         dataset = Reddit(root=root)
+#         data = dataset[0]
+#         self.graph = _C.Graph(
+#             edge_index=data.edge_index.numpy(),
+#             num_nodes=data.num_nodes
+#         )
+#         self.x = data.x.numpy()
+#         self.y = data.y.numpy()
+#         self.train_mask = data.train_mask.numpy()
+#         self.num_classes = dataset.num_classes
+
+
 class RedditDataset():
     def __init__(self, root):
-        from torch_geometric.datasets import Reddit
-        dataset = Reddit(root=root)
-        data = dataset[0]
+        url = 'https://data.dgl.ai/dataset/reddit.zip'
+        npz_file = os.path.join(root, 'reddit_data.npz')
+        npz_graph_file = os.path.join(root, 'reddit_graph.npz')
+        if not os.path.exists(npz_file) or not os.path.exists(npz_graph_file):
+            zip_file = download_url(url, root)
+            extract_zip(zip_file, root)
+            os.unlink(zip_file)
+        data = np.load(npz_file)
+
+        self.x = data['feature']
+        self.y = data['label']
+        split = data['node_types']
+        adj = sp.load_npz(npz_graph_file)
+        edge_index = np.stack([adj.row, adj.col])
+        self.train_mask = split == 1
+        self.num_classes = int(self.y.max() + 1)
         self.graph = _C.Graph(
-            edge_index=data.edge_index.numpy(),
-            num_nodes=data.num_nodes
+            edge_index=edge_index,
+            num_nodes=len(self.y)
         )
-        self.x = data.x.numpy()
-        self.y = data.y.numpy()
-        self.train_mask = data.train_mask.numpy()
-        self.num_classes = dataset.num_classes
 
 class OGBDataset():
     def __init__(self, root, name):

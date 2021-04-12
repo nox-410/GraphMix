@@ -18,7 +18,9 @@ template<> struct PSFData<NodePull> {
 };
 
 template<> struct PSFData<GraphPull> {
-  using Request = tuple<>;
+  using Request = tuple<
+    SArray<int> // desired sampler
+  >;
   using Response = tuple<
     SArray<graph_float>, // float feature
     SArray<graph_int>, // int feature

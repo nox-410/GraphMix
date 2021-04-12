@@ -59,13 +59,18 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
 }
 
 GraphClient::query_t
-GraphClient::pullGraph() {
+GraphClient::pullGraph(py::args args) {
+  SArray<int> priority;
+  for (auto item : args) {
+    SamplerType sampler = item.cast<SamplerType>();
+    priority.push_back(static_cast<int>(sampler));
+  }
   py::gil_scoped_release release;
   data_mu.lock();
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
   data_mu.unlock();
-  PSFData<GraphPull>::Request request;
+  PSFData<GraphPull>::Request request(std::move(priority));
   auto cb = [cur_query, this] (const PSFData<GraphPull>::Response &response) {
     auto &csr_i = std::get<2>(response);
     auto &csr_j = std::get<3>(response);

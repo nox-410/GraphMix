@@ -3,6 +3,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
+import random
 import graphmix
 
 def test(args):
@@ -22,8 +23,11 @@ def test(args):
         all_edge = np.array(cora_dataset.graph.edge_index).T
         for u,v in zip(graph.edge_index[0], graph.edge_index[1]):
             assert (index[u], index[v]) in all_edge
-    for i in range(100):
-        query = comm.pull_graph()
+    samplers = [graphmix.sampler.LocalNode, graphmix.sampler.GlobalNode,
+        graphmix.sampler.GraphSage, graphmix.sampler.RandomWalk]
+    for i in range(20):
+        random.shuffle(samplers)
+        query = comm.pull_graph(*samplers)
         graph = comm.resolve(query)
         graph.convert2coo()
         index = graph.i_feat[:,-1]

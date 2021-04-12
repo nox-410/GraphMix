@@ -5,6 +5,15 @@
 
 namespace ps {
 
+static vector<SamplerType> getDefaultSamplerPriority() {
+  return {
+    SamplerType::kGraphSage,
+    SamplerType::kRandomWalk,
+    SamplerType::kGlobalNode,
+    SamplerType::kLocalNode,
+  };
+}
+
 void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response) {
   //std::this_thread::sleep_for(std::chrono::milliseconds(100));
   auto keys = get<0>(request);
@@ -34,19 +43,35 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
 
 void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
   CHECK(!graph_queue_.empty()) << "No sampler registered";
+  std::vector<SamplerType> valid_sampler, request_sampler;
+  for (auto val: std::get<0>(request))
+    request_sampler.push_back(static_cast<SamplerType>(val));
+  if (request_sampler.empty())
+    request_sampler = getDefaultSamplerPriority();
+  // filter out not exist samplers;
+  for (auto val: request_sampler)
+    if (graph_queue_.count(val)) valid_sampler.push_back(val);
+  if (valid_sampler.empty()) {
+    // request might not be correct
+    std::get<4>(response) = static_cast<int>(SamplerType::kNumSamplerType);
+    return;
+  }
+
   GraphMiniBatch result;
   bool success = false;
-  for (auto &queue : graph_queue_) {
-    success = queue.second->try_pop(result);
+  for (auto sampler : valid_sampler) {
+    success = graph_queue_[sampler]->try_pop(result);
     if (success) {
-      std::get<4>(response) = static_cast<int>(queue.first);
+      std::get<4>(response) = static_cast<int>(sampler);
       break;
     }
   }
+
   // If all samplers are not ready, use the one with lowest priority
   if (!success) {
-    graph_queue_.rbegin()->second->pop(result);
-    std::get<4>(response) = static_cast<int>(graph_queue_.rbegin()->first);
+    SamplerType final_wait_sampler = valid_sampler.back();
+    graph_queue_[final_wait_sampler]->pop(result);
+    std::get<4>(response) = static_cast<int>(final_wait_sampler);
   }
   std::get<0>(response) = result.f_feat;
   std::get<1>(response) = result.i_feat;

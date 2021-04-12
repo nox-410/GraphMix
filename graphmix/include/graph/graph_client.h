@@ -14,7 +14,7 @@ public:
   // for data push&pull
   typedef uint64_t query_t;
   query_t pullData(py::array_t<node_id> indices, NodePack &nodes);
-  query_t pullGraph();
+  query_t pullGraph(py::args args);
   /*
     wait_data waits until a query success
   */

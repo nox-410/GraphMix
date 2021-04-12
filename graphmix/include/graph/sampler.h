@@ -20,7 +20,6 @@ public:
   std::unordered_set<node_id> query_nodes;
   NodePack recvNodes;
   SamplerType type;
-  bool stopSampling = false;
 };
 
 class _randomWalkState : public _sampleState {
@@ -47,6 +46,7 @@ public:
   BaseSampler(GraphHandle *handle);
   void sample_start();
   void join() { thread_.join(); }
+  void kill() { killed_ = true; }
   virtual ~BaseSampler() = default;
   virtual SamplerType type() = 0;
 protected:
@@ -55,6 +55,7 @@ protected:
   virtual void sample_once(sampleState) = 0;
 private:
   std::thread thread_;
+  bool killed_ = false;
 };
 
 typedef std::unique_ptr<BaseSampler> SamplerPTR;

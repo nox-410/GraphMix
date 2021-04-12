@@ -73,12 +73,6 @@ void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys,
   if (wait_num == 1) defaultCallback(state);
 }
 
-void RemoteHandle::pushStopCommand(SamplerType type) {
-  auto state = makeSampleState(type);
-  state->stopSampling = true;
-  recv_queue_[type]->Push(state);
-}
-
 sampleState RemoteHandle::getSampleState(SamplerType type) {
   sampleState state;
   bool success = false;

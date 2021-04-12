@@ -16,7 +16,6 @@ public:
   RemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &, GraphHandle*);
   void initCache(size_t, cache::policy);
   void queryRemote(sampleState state);
-  void pushStopCommand(SamplerType);
   sampleState getSampleState(SamplerType type);
 
   // Profile data

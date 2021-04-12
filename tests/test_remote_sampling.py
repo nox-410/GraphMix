@@ -32,11 +32,11 @@ def test(args):
 
 def server_init(server):
     if graphmix._C.rank() == 0:
-        server.init_cache(1, graphmix.cache.LFUOpt)
+        server.init_cache(0.3, graphmix.cache.LFUOpt)
     elif graphmix._C.rank() == 1:
-        server.init_cache(1, graphmix.cache.LFU)
+        server.init_cache(0.3, graphmix.cache.LFU)
     elif graphmix._C.rank() == 2:
-        server.init_cache(1, graphmix.cache.LRU)
+        server.init_cache(0.3, graphmix.cache.LRU)
     server.add_sampler(graphmix.sampler.GlobalNode, batch_size=512)
     graphmix._C.barrier_all()
     graphmix._C.barrier_all()

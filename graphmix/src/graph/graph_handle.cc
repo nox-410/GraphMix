@@ -102,7 +102,7 @@ int GraphHandle::getServer(node_id idx) {
 
 void GraphHandle::stopSampling() {
   for (SamplerPTR &sampler: samplers_)
-    remote_->pushStopCommand(sampler->type());
+    sampler->kill();
   // Clean the queue so that sampelrs can stop
   GraphMiniBatch temp;
   for (auto &queue : graph_queue_) {

@@ -20,11 +20,9 @@ BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this
 
 void BaseSampler::sample_start() {
   auto func = [this] () {
-    while (true) {
+    while (!killed_) {
       sampleState state = handle_->getRemote()->getSampleState(type());
       CHECK(state->type == type());
-      if (state->stopSampling)
-        return;
       sample_once(std::move(state));
     }
     handle_.reset();

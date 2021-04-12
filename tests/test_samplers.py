@@ -7,7 +7,6 @@ import random
 import graphmix
 
 def test(args):
-    graphmix._C.barrier_all()
     cora_dataset = graphmix.dataset.load_dataset("Cora")
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
@@ -45,7 +44,7 @@ def server_init(server):
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
     server.add_sampler(graphmix.sampler.RandomWalk, rw_head=256, rw_length=2)
     server.add_sampler(graphmix.sampler.GraphSage, batch_size=16, depth=2, width=2)
-    graphmix._C.barrier_all()
+    server.is_ready()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

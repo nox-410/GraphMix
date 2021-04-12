@@ -25,8 +25,11 @@ def test(args):
 
     print("Check OK")
 
+def server_init(server):
+    server.is_ready()
+
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="../config/test_config.yml")
     args = parser.parse_args()
-    graphmix.launcher(test, args)
+    graphmix.launcher(test, args, server_init=server_init)

@@ -34,9 +34,7 @@ def start_server(graph_data_path, server_init):
     _C.init()
     rank = _C.rank()
     server = Shard(graph_data_path, rank).create_server()
-    _C.barrier_all()
-    if server_init:
-        server_init(server)
+    server_init(server)
     _C.finalize()
 
 def start_scheduler():
@@ -53,7 +51,6 @@ def start_worker(func, args, graph_data_path):
     shard = Shard(graph_data_path, -1)
     shard.init_worker(target_server)
     args.meta = shard.meta
-    _C.barrier_all()
     func(args)
     _C.finalize()
 
@@ -65,7 +62,7 @@ def signal_handler(signal, frame):
 
 process_list = []
 
-def launcher(target, args, server_init=None):
+def launcher(target, args, server_init):
     file_path = args.config
     settings = yaml.load(open(file_path).read(), Loader=yaml.FullLoader)
     for key, value in settings["env"].items():

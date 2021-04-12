@@ -5,7 +5,7 @@ import yaml
 import time
 
 import graphmix
-from graphmix.torch import GCN, mp_matrix
+from graphmix.torch import SageConv, mp_matrix
 import torch
 import torch.nn as nn
 import torch.distributed as dist
@@ -14,9 +14,9 @@ import torch.nn.functional as F
 class Net(torch.nn.Module):
     def __init__(self, dim_in, dim_out, hidden):
         super(Net, self).__init__()
-        self.conv1 = GCN(dim_in, hidden, activation="relu", dropout=0.1)
-        self.conv2 = GCN(hidden, hidden, activation="relu", dropout=0.1)
-        self.classifier = torch.nn.Linear(hidden, dim_out)
+        self.conv1 = SageConv(dim_in, hidden, activation="relu", dropout=0.1)
+        self.conv2 = SageConv(2*hidden, hidden, activation="relu", dropout=0.1)
+        self.classifier = torch.nn.Linear(2*hidden, dim_out)
         torch.nn.init.xavier_uniform_(self.classifier.weight)
 
     def forward(self, x, graph):
@@ -28,7 +28,6 @@ class Net(torch.nn.Module):
         return x
 
 def worker_main(args):
-    graphmix._C.barrier_all()
     meta = args.meta
     dist.init_process_group(
     	backend='nccl',
@@ -47,7 +46,7 @@ def worker_main(args):
     start = time.time()
 
     from graphmix.dataset import load_dataset
-    dataset = load_dataset("Cora")
+    dataset = load_dataset(meta["name"])
     best_result = 0
     def eval_data():
         nonlocal best_result
@@ -62,11 +61,14 @@ def worker_main(args):
             best_result = max(best_result, float(count/total))
             print(float(count/total), best_result)
             model.train()
-
-    for i in range(100):
+    import random
+    samplers = [graphmix.sampler.LocalNode, graphmix.sampler.GlobalNode,
+        graphmix.sampler.GraphSage, graphmix.sampler.RandomWalk]
+    for i in range(150):
+        random.shuffle(samplers)
         graph = comm.resolve(query)
         graph.add_self_loop()
-        query = comm.pull_graph()
+        query = comm.pull_graph(*samplers)
         x = torch.Tensor(graph.f_feat).to(device)
         y = torch.Tensor(graph.i_feat).to(device, torch.long)
         if graph.tag == graphmix.sampler.GraphSage:
@@ -95,11 +97,11 @@ def worker_main(args):
 
 def server_init(server):
     #server.init_cache(1, graphmix.cache.LFUOpt)
-    #server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=16, depth=2, width=2)
-    #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=256, rw_length=2)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
+    #server.add_sampler(graphmix.sampler.GraphSage, batch_size=12, depth=2, width=2)
+    #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=1024, rw_length=2)
     #server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
-    graphmix._C.barrier_all()
+    server.is_ready()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

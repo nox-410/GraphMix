@@ -6,7 +6,6 @@ import time
 import graphmix
 
 def test(args):
-    graphmix._C.barrier_all()
     cora_dataset = graphmix.dataset.load_dataset("Cora")
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
@@ -38,7 +37,7 @@ def server_init(server):
     elif graphmix._C.rank() == 2:
         server.init_cache(0.3, graphmix.cache.LRU)
     server.add_sampler(graphmix.sampler.GlobalNode, batch_size=512)
-    graphmix._C.barrier_all()
+    server.is_ready()
     graphmix._C.barrier_all()
     print(graphmix._C.rank(), server.get_perf())
 

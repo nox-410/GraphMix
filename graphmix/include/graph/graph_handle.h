@@ -39,6 +39,7 @@ public:
   py::tuple getProfileData() {
     return py::make_tuple(remote_->cache_miss_cnt_, remote_->nonlocal_cnt_, remote_->total_cnt_);
   }
+  void setReady();
   const static int kserverBufferSize=32;
 private:
 // ---------------------- static node data -------------------------------------
@@ -51,6 +52,11 @@ private:
   std::vector<SamplerPTR> samplers_;
 // ---------------------- Remote data handle -----------------------------------
   std::unique_ptr<RemoteHandle> remote_;
+//----------------------- handle initialization --------------------------------
+  bool is_ready_ = false;
+  std::mutex start_mu_;
+  std::condition_variable cv_;
+  void waitReady();
 };
 
 std::shared_ptr<GraphHandle> StartServer();

@@ -8,7 +8,6 @@ import graphmix
 max_thread = 5
 
 def test(args):
-    graphmix._C.barrier_all()
     rank = graphmix._C.rank()
     nrank = graphmix._C.num_worker()
     comm = graphmix._C.get_client()
@@ -28,7 +27,7 @@ def test(args):
 
 def server_init(server):
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=128)
-    graphmix._C.barrier_all()
+    server.is_ready()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

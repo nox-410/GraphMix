@@ -5,6 +5,18 @@
 
 namespace ps {
 
+void GraphHandle::setReady() {
+  std::unique_lock<std::mutex> lock(start_mu_);
+  is_ready_ = true;
+  cv_.notify_all();
+}
+
+void GraphHandle::waitReady() {
+  std::unique_lock<std::mutex> lock(start_mu_);
+  while (!is_ready_)
+    cv_.wait(lock);
+}
+
 static vector<SamplerType> getDefaultSamplerPriority() {
   return {
     SamplerType::kGraphSage,
@@ -16,6 +28,7 @@ static vector<SamplerType> getDefaultSamplerPriority() {
 
 void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response) {
   //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  waitReady();
   auto keys = get<0>(request);
   if (keys.empty()) return;
   size_t n = keys.size();
@@ -42,7 +55,7 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
 }
 
 void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
-  CHECK(!graph_queue_.empty()) << "No sampler registered";
+  waitReady();
   std::vector<SamplerType> valid_sampler, request_sampler;
   for (auto val: std::get<0>(request))
     request_sampler.push_back(static_cast<SamplerType>(val));
@@ -188,6 +201,7 @@ void GraphHandle::initBinding(py::module &m) {
     .def("init_data", &GraphHandle::initData)
     .def("init_cache", &GraphHandle::initCache)
     .def("get_perf", &GraphHandle::getProfileData)
+    .def("is_ready", &GraphHandle::setReady)
     .def("add_sampler", &GraphHandle::addSampler);
 }
 

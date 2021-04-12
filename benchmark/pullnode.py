@@ -37,10 +37,13 @@ def test(args):
         task_list[i] = t.submit(pull_data)
     time.sleep(1000)
 
+def server_init(server):
+    server.is_ready()
+
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="../config/test_config.yml")
     args = parser.parse_args()
     import os
     os.environ["PS_WORKER_THREAD"]=str(max_thread)
-    graphmix.launcher(test, args)
+    graphmix.launcher(test, args, server_init=server_init)

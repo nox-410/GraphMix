@@ -431,6 +431,7 @@ void Van::Receiving() {
         ProcessBarrierCommand(&msg);
       } else if (ctrl.cmd == Control::HEARTBEAT) {
         ProcessHearbeat(&msg);
+      } else if (ctrl.cmd == Control::ARRIVE || ctrl.cmd == Control::LEAVE) {
       } else {
         LOG(WARNING) << "Drop unknown typed message " << msg.DebugString();
       }

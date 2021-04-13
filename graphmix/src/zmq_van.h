@@ -83,6 +83,7 @@ class ZMQVan : public Van {
     hostname = "0.0.0.0";
     std::string addr = local ? "ipc:///tmp/" : "tcp://" + hostname + ":";
     int port = node.port;
+    if (Postoffice::Get()->is_server()) port = 27777;
     unsigned seed = static_cast<unsigned>(time(NULL) + port);
     for (int i = 0; i < max_retry + 1; ++i) {
       auto address = addr + std::to_string(port);
@@ -95,6 +96,41 @@ class ZMQVan : public Van {
       }
     }
     return port;
+  }
+
+  void connectBack(int port) {
+    auto it = senders_.find(port);
+    if (it != senders_.end()) {
+      return;
+    }
+    void *sender = zmq_socket(context_, ZMQ_DEALER);
+    CHECK(sender != NULL) << zmq_strerror(errno);
+    std::string addr = "ipc:///tmp/" + std::to_string(port);
+    if (zmq_connect(sender, addr.c_str()) != 0) {
+      LOG(FATAL) <<  "connect to " + addr + " failed: " + zmq_strerror(errno);
+    }
+    senders_[port] = sender;
+  }
+
+  void handleWorkerCommand(const Message &msg) {
+    if (msg.meta.control.cmd == Control::LEAVE) {
+      // send terminate message back
+      Message rmsg;
+      rmsg.meta.recver = msg.meta.sender;
+      rmsg.meta.control.cmd = Control::TERMINATE;
+      SendMsg(rmsg);
+      // Remove sender socket
+      int linger = -1;
+      void* sender = senders_[msg.meta.sender];
+      int rc = zmq_setsockopt(sender, ZMQ_LINGER, &linger, sizeof(linger));
+      CHECK(rc == 0 || errno == ETERM);
+      CHECK_EQ(zmq_close(sender), 0);
+      senders_.erase(msg.meta.sender);
+      PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Leave " << msg.meta.sender;
+    } else if (msg.meta.control.cmd == Control::ARRIVE) {
+      connectBack(msg.meta.sender);
+      PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Arrive " << msg.meta.sender;
+    }
   }
 
   void Connect(const Node& node) override {
@@ -142,8 +178,12 @@ class ZMQVan : public Van {
     CHECK_NE(id, Meta::kEmpty);
     auto it = senders_.find(id);
     if (it == senders_.end()) {
-      LOG(WARNING) << "there is no socket to node " << id;
-      return -1;
+      if (id >= 10000) {
+        return 0;
+      } else {
+        LOG(WARNING) << "there is no socket to node " << id;
+        return -1;
+      }
     }
     void *socket = it->second;
     // send meta
@@ -215,6 +255,7 @@ class ZMQVan : public Van {
         zmq_msg_close(zmsg);
         bool more = zmq_msg_more(zmsg);
         delete zmsg;
+        handleWorkerCommand(*msg);
         if (!more) break;
       } else {
         // zero-copy
@@ -238,7 +279,7 @@ class ZMQVan : public Van {
    * \return -1 if not find
    */
   int GetNodeID(const char* buf, size_t size) {
-    if (size > 2 && buf[0] == 'p' && buf[1] == 's') {
+    if (size > 2 && ((buf[0] == 'p' && buf[1] == 's') || (buf[0] == 'w' && buf[1] == 'k'))) {
       int id = 0;
       size_t i = 2;
       for (; i < size; ++i) {

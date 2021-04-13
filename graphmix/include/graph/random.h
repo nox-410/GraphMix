@@ -9,6 +9,7 @@ public:
   RandomIndexSelecter();
   std::unordered_set<size_t> unique(size_t n, size_t N);
   inline size_t randInt(size_t N) { return engine_() % N; }
+  void seed(uint64_t sd) { engine_.seed(sd); }
 private:
   static size_t global_counter;
   static std::mutex mtx;

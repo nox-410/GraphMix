@@ -106,21 +106,6 @@ class Van {
    */
   virtual int SendMsg(const Message &msg) = 0;
 
-  /**
-   * \brief pack meta into a string
-   */
-  void PackMeta(const Meta &meta, char **meta_buf, int *buf_size);
-
-  /**
-   * \brief pack meta into protobuf
-   */
-  void PackMetaPB(const Meta &meta, PBMeta *pb);
-
-  /**
-   * \brief unpack meta from a string
-   */
-  void UnpackMeta(const char *meta_buf, int buf_size, Meta *meta);
-
   Node scheduler_;
   Node my_node_;
   bool is_scheduler_;
@@ -203,5 +188,22 @@ class Van {
 
   DISALLOW_COPY_AND_ASSIGN(Van);
 };
+
+
+/**
+ * \brief pack meta into a string
+ */
+void PackMeta(const Meta &meta, char **meta_buf, int *buf_size);
+
+/**
+ * \brief pack meta into protobuf
+ */
+void PackMetaPB(const Meta &meta, PBMeta *pb);
+
+/**
+ * \brief unpack meta from a string
+ */
+void UnpackMeta(const char *meta_buf, int buf_size, Meta *meta);
+
 }  // namespace ps
 #endif  // PS_INTERNAL_VAN_H_

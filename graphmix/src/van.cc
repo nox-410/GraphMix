@@ -440,7 +440,7 @@ void Van::Receiving() {
   }
 }
 
-void Van::PackMetaPB(const Meta& meta, PBMeta* pb) {
+void PackMetaPB(const Meta& meta, PBMeta* pb) {
   if (meta.app_id != Meta::kEmpty) pb->set_app_id(meta.app_id);
   if (meta.timestamp != Meta::kEmpty) pb->set_timestamp(meta.timestamp);
   pb->set_request(meta.request);
@@ -466,7 +466,7 @@ void Van::PackMetaPB(const Meta& meta, PBMeta* pb) {
   }
 }
 
-void Van::PackMeta(const Meta& meta, char** meta_buf, int* buf_size) {
+void PackMeta(const Meta& meta, char** meta_buf, int* buf_size) {
   // convert into protobuf
   PBMeta pb;
   if (meta.app_id != Meta::kEmpty) pb.set_app_id(meta.app_id);
@@ -501,7 +501,7 @@ void Van::PackMeta(const Meta& meta, char** meta_buf, int* buf_size) {
       << "failed to serialize protbuf";
 }
 
-void Van::UnpackMeta(const char* meta_buf, int buf_size, Meta* meta) {
+void UnpackMeta(const char* meta_buf, int buf_size, Meta* meta) {
   // to protobuf
   PBMeta pb;
   CHECK(pb.ParseFromArray(meta_buf, buf_size))

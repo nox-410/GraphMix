@@ -1,5 +1,7 @@
 #include "graph/random.h"
 
+#include "common/logging.h"
+
 std::mutex RandomIndexSelecter::mtx;
 size_t RandomIndexSelecter::global_counter;
 
@@ -13,7 +15,7 @@ std::unordered_set<size_t>
 RandomIndexSelecter::unique(size_t n, size_t N) {
   std::unordered_set<size_t> result;
   if (n > N)
-    throw std::invalid_argument("Error random sequence n > N");
+    LF << "Error random sequence n > N " << n << ">" << N;
   if (n <= N / 2) {
     result.reserve(n);
     while (result.size() < n) {

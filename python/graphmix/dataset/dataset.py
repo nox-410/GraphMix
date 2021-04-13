@@ -10,7 +10,7 @@ from .utils import download_url, process_graph, extract_zip
 # class PlanetoidDataset():
 #     def __init__(self, root, name):
 #         from torch_geometric.datasets import Planetoid
-#         dataset = Planetoid(root=root, name=name)
+#         dataset = Planetoid(root=root, name=name, split="full")
 #         data = dataset[0]
 #         self.graph = _C.Graph(
 #             edge_index=data.edge_index.numpy(),
@@ -20,10 +20,9 @@ from .utils import download_url, process_graph, extract_zip
 #         self.y = data.y.numpy()
 #         self.train_mask = data.train_mask.numpy()
 #         self.num_classes = dataset.num_classes
-#         self.dt = PlanetoidDataset1(root, name)
 
 class PlanetoidDataset():
-    def __init__(self, root, dataset_name):
+    def __init__(self, root, dataset_name, public_split=False):
         dataset_name = dataset_name.lower()
         assert dataset_name in ["cora", "pubmed", "citeseer"]
         super().__init__()
@@ -55,7 +54,11 @@ class PlanetoidDataset():
         )
         self.train_mask = np.zeros(len(self.y), dtype=np.long)
         self.train_mask[0:len(y)] = 1 # train
-        # self.mask[-1000:0] = 2 # test
+        if not public_split:
+            eval_index = np.arange(len(y), len(y) + 500)
+            self.train_mask[:] = 1
+            self.train_mask[eval_index] = 0
+            self.train_mask[sorted_test_index] = 0
         self.num_classes = y.shape[1]
 
 # class RedditDataset():

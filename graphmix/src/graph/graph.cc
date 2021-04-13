@@ -1,5 +1,7 @@
 #include "graph/graph.h"
 
+#include "graph/random.h"
+
 std::shared_ptr<PyGraph> makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
   assert(edge_index.ndim() == 2 && edge_index.shape(0) == 2);
   size_t num_edges = edge_index.shape(1);
@@ -250,8 +252,14 @@ py::array_t<idx_t> PyGraph::PyPartition(int nparts) {
   return binding::vec(x);
 }
 
-py::list PyGraph::part_graph(int nparts, bool balance_edge) {
-  auto parts = partition((idx_t)nparts, balance_edge);
+py::list PyGraph::part_graph(int nparts, bool balance_edge, bool random) {
+  std::vector<idx_t> parts;
+  if (random) {
+    RandomIndexSelecter rd;
+    parts.resize(nnodes_);
+    for (size_t i = 0; i < nnodes_; i++) parts[i] = rd.randInt(nparts);
+  } else
+    parts = partition((idx_t)nparts, balance_edge);
 
   // compute new index and offset for each node
   std::vector<node_id> reindex(nNodes()), counting(nparts, 0), offset(nparts, 0);
@@ -297,7 +305,7 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("i_feat", &PyGraph::getIntFeat)
     .def_property_readonly("tag", &PyGraph::getTag)
     .def_property_readonly("extra", &PyGraph::getExtra)
-    .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true)
+    .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true, py::arg("random")=false)
     .def("partition", &PyGraph::PyPartition)
     .def("gcn_norm", &PyGraph::gcnNorm)
     .def("add_self_loop", &PyGraph::addSelfLoop)

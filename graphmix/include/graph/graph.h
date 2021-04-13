@@ -43,7 +43,7 @@ public:
   py::array_t<float> gcnNorm(bool use_original_gcn_norm);
 
   //Graph Partition API
-  py::list part_graph(int nparts, bool balance_edge);
+  py::list part_graph(int nparts, bool balance_edge, bool random);
   std::vector<idx_t> partition(idx_t nparts, bool balance_edge);
   py::array_t<idx_t> PyPartition(idx_t nparts);
 

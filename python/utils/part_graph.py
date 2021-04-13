@@ -12,7 +12,7 @@ def part_graph(dataset_name, nparts, output_path):
     dataset = load_dataset(dataset_name)
     print("step1: load_dataset complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
-    partition = dataset.graph.part_graph(nparts)
+    partition = dataset.graph.part_graph(nparts, random=args.random)
     print("step2: partition graph complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
     float_feature = dataset.x.astype(np.float32)
@@ -47,6 +47,7 @@ def part_graph(dataset_name, nparts, output_path):
         "class": dataset.num_classes,
         "num_part": nparts,
         "partition": part_meta,
+        "random" : args.random
     }
     edge_path = os.path.join(output_path, "meta.yml")
     with open(edge_path, 'w') as f:
@@ -58,6 +59,7 @@ if __name__ =='__main__':
     parser.add_argument("--nparts", "-n", required=True)
     parser.add_argument("--path", "-p", required=True)
     parser.add_argument("--nodeid", action="store_true")
+    parser.add_argument("--random", action="store_true")
     args = parser.parse_args()
     output_path = str(args.path)
     nparts = int(args.nparts)

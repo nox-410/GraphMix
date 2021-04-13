@@ -1,3 +1,5 @@
+#pragma once
+
 #include <random>
 #include <mutex>
 #include <unordered_set>

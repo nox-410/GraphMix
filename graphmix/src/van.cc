@@ -290,7 +290,11 @@ void Van::Start(int customer_id) {
         }
         CHECK(!interface.empty()) << "failed to get the interface";
       }
-      int port = GetAvailablePort();
+      int port = 0;
+      if (Postoffice::Get()->is_server())
+        port = atoi(CHECK_NOTNULL(Environment::Get()->find("GRAPHMIX_SERVER_PORT")));
+      else
+        port = GetAvailablePort();
 
       CHECK(!ip.empty()) << "failed to get ip";
       CHECK(port) << "failed to get a port";

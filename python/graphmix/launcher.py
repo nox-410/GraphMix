@@ -7,15 +7,12 @@ import multiprocessing
 from .shard import Shard
 
 envvar = [
-"PS_HEARTBEAT_TIMEOUT",
-"PS_HEARTBEAT_INTERVAL",
-"PS_RESEND",
 "PS_VERBOSE",
 "PS_WORKER_THREAD",
 "PS_SERVER_THREAD",
 "ZMQ_WORKER_THREAD",
 "ZMQ_SERVER_THREAD",
-"PS_DROP_MSG",
+"GRAPHMIX_SERVER_PORT",
 "DMLC_PS_VAN_TYPE",
 "DMLC_NUM_WORKER",
 "DMLC_NUM_SERVER",
@@ -28,6 +25,8 @@ envvar = [
 "DMLC_USE_KUBERNETES",
 "DMLC_PS_WATER_MARK",
 ]
+
+default_server_port = 27777
 
 def start_server(graph_data_path, server_init):
     os.environ['DMLC_ROLE'] = "server"
@@ -62,24 +61,31 @@ def launcher(target, args, server_init):
     settings = yaml.load(open(file_path).read(), Loader=yaml.FullLoader)
     for key, value in settings["env"].items():
         os.environ[str(key)] = str(value)
+    if "GRAPHMIX_SERVER_PORT" not in os.environ.keys():
+        server_port = default_server_port
+    else:
+        server_port = int(os.environ["GRAPHMIX_SERVER_PORT"])
 
     graph_data_path = os.path.abspath(settings["launch"]["data"])
     args.num_local_worker = int(settings["launch"]["worker"])
     args.num_local_server = int(settings["launch"]["server"])
     for i in range(args.num_local_worker):
         proc = multiprocessing.Process(target=start_worker, args=[target, args, graph_data_path])
+        proc.start()
         process_list.append(proc)
 
     for i in range(args.num_local_server):
+        # if launch multiple server on one node, use different ports
+        os.environ["GRAPHMIX_SERVER_PORT"] = str(server_port + i)
         proc = multiprocessing.Process(target=start_server, args=[graph_data_path, server_init])
+        proc.start()
         process_list.append(proc)
 
     if settings["launch"]["scheduler"] != 0:
         proc = multiprocessing.Process(target=start_scheduler)
+        proc.start()
         process_list.append(proc)
 
-    for proc in process_list:
-        proc.start()
     signal.signal(signal.SIGINT, signal_handler)
     for proc in process_list:
         proc.join()

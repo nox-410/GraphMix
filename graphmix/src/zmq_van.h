@@ -83,7 +83,6 @@ class ZMQVan : public Van {
     hostname = "0.0.0.0";
     std::string addr = local ? "ipc:///tmp/" : "tcp://" + hostname + ":";
     int port = node.port;
-    if (Postoffice::Get()->is_server()) port = 27777;
     unsigned seed = static_cast<unsigned>(time(NULL) + port);
     for (int i = 0; i < max_retry + 1; ++i) {
       auto address = addr + std::to_string(port);

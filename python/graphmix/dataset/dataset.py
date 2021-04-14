@@ -101,19 +101,21 @@ class RedditDataset():
 
 class OGBDataset():
     def __init__(self, root, name):
-        from ogb.nodeproppred import PygNodePropPredDataset
-        dataset = PygNodePropPredDataset(name=name, root=root)
+        from ogb.nodeproppred import NodePropPredDataset
+        dataset = NodePropPredDataset(name=name, root=root)
+        split_idx = dataset.get_idx_split()
         data = dataset[0]
+        num_nodes=data[1].shape[0]
         self.graph = _C.Graph(
-            edge_index=data.edge_index.numpy(),
-            num_nodes=data.num_nodes
+            edge_index=data[0]["edge_index"],
+            num_nodes=num_nodes
         )
         split_idx = dataset.get_idx_split()
         train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
 
-        self.x = data.x.numpy()
-        self.y = data.y.numpy().squeeze()
-        self.train_mask = np.zeros(data.num_nodes, np.bool)
+        self.x = data[0]["node_feat"]
+        self.y = data[1].squeeze()
+        self.train_mask = np.zeros(num_nodes, np.bool)
         self.train_mask[train_idx] = True
         self.num_classes = dataset.num_classes
 

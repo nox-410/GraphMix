@@ -26,7 +26,7 @@ static vector<SamplerType> getDefaultSamplerPriority() {
   };
 }
 
-void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response) {
+void GraphHandle::serve(const PSFData<NodePull>::Request& request, PSFData<NodePull>::Response& response) {
   //std::this_thread::sleep_for(std::chrono::milliseconds(100));
   waitReady();
   auto keys = get<0>(request);
@@ -54,15 +54,15 @@ void GraphHandle::serve(const PSFData<NodePull>::Request &request, PSFData<NodeP
   get<3>(response) = offset;
 }
 
-void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response) {
+void GraphHandle::serve(const PSFData<GraphPull>::Request& request, PSFData<GraphPull>::Response& response) {
   waitReady();
   std::vector<SamplerType> valid_sampler, request_sampler;
-  for (auto val: std::get<0>(request))
+  for (auto val : std::get<0>(request))
     request_sampler.push_back(static_cast<SamplerType>(val));
   if (request_sampler.empty())
     request_sampler = getDefaultSamplerPriority();
   // filter out not exist samplers;
-  for (auto val: request_sampler)
+  for (auto val : request_sampler)
     if (graph_queue_.count(val)) valid_sampler.push_back(val);
   if (valid_sampler.empty()) {
     // request might not be correct
@@ -93,7 +93,7 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<Grap
   std::get<5>(response) = result.extra;
 }
 
-void GraphHandle::serve(const PSFData<MetaPull>::Request &request, PSFData<MetaPull>::Response &response) {
+void GraphHandle::serve(const PSFData<MetaPull>::Request& request, PSFData<MetaPull>::Response& response) {
   waitReady();
   std::string s;
   {
@@ -135,7 +135,7 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   CHECK(edges.ndim() == 2 && edges.shape(0) == 2);
   size_t nedges = edges.shape(1);
   nodes_.resize(num_local_nodes_);
-  for (node_id i = 0 ; i < num_local_nodes_; i++) {
+  for (node_id i = 0; i < num_local_nodes_; i++) {
     nodes_[i] = makeNodeData();
     nodes_[i]->f_feat.resize(fLen());
     nodes_[i]->i_feat.resize(iLen());
@@ -156,14 +156,14 @@ int GraphHandle::getServer(node_id idx) {
 }
 
 void GraphHandle::stopSampling() {
-  for (SamplerPTR &sampler: samplers_)
+  for (SamplerPTR& sampler : samplers_)
     sampler->kill();
   // Clean the queue so that sampelrs can stop
   GraphMiniBatch temp;
-  for (auto &queue : graph_queue_) {
-    while(queue.second->try_pop(temp));
+  for (auto& queue : graph_queue_) {
+    while (queue.second->try_pop(temp));
   }
-  for (SamplerPTR &sampler: samplers_)
+  for (SamplerPTR& sampler : samplers_)
     sampler->join();
   samplers_.clear();
 }
@@ -180,39 +180,43 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
     int value = item.second.cast<int>();
     kvs.emplace(key, value);
   }
-  switch (type)
-  {
-  case SamplerType::kLocalNode:
-    CHECK(kvs.count("batch_size"));
-    sampler = std::make_unique<LocalNodeSampler>(this, kvs["batch_size"]);
-    break;
-  case SamplerType::kGlobalNode:
-    CHECK(kvs.count("batch_size"));
-    sampler = std::make_unique<GlobalNodeSampler>(this, kvs["batch_size"]);
-    break;
-  case SamplerType::kRandomWalk:
-    CHECK(kvs.count("rw_head"));
-    CHECK(kvs.count("rw_length"));
-    sampler = std::make_unique<RandomWalkSampler>(this, kvs["rw_head"], kvs["rw_length"]);
-    break;
-  case SamplerType::kGraphSage:
-    CHECK(kvs.count("batch_size"));
-    CHECK(kvs.count("depth"));
-    CHECK(kvs.count("width"));
-    sampler = std::make_unique<GraphSageSampler>(this, kvs["batch_size"], kvs["depth"], kvs["width"]);
-    break;
-  default:
-    LF << "Sampler Not Implemented";
+
+  int thread = kvs.count("thread") ? kvs["thread"] : 1;
+  for (int i = 0; i < thread; i++) {
+    switch (type)
+    {
+    case SamplerType::kLocalNode:
+      CHECK(kvs.count("batch_size"));
+      sampler = std::make_unique<LocalNodeSampler>(this, kvs["batch_size"]);
+      break;
+    case SamplerType::kGlobalNode:
+      CHECK(kvs.count("batch_size"));
+      sampler = std::make_unique<GlobalNodeSampler>(this, kvs["batch_size"]);
+      break;
+    case SamplerType::kRandomWalk:
+      CHECK(kvs.count("rw_head"));
+      CHECK(kvs.count("rw_length"));
+      sampler = std::make_unique<RandomWalkSampler>(this, kvs["rw_head"], kvs["rw_length"]);
+      break;
+    case SamplerType::kGraphSage:
+      CHECK(kvs.count("batch_size"));
+      CHECK(kvs.count("depth"));
+      CHECK(kvs.count("width"));
+      sampler = std::make_unique<GraphSageSampler>(this, kvs["batch_size"], kvs["depth"], kvs["width"]);
+      break;
+    default:
+      LF << "Sampler Not Implemented";
+    }
+    sampler->sample_start();
+    samplers_.push_back(std::move(sampler));
   }
-  sampler->sample_start();
-  samplers_.push_back(std::move(sampler));
 }
 
-void GraphHandle::push(const GraphMiniBatch &graph, SamplerType type) {
+void GraphHandle::push(const GraphMiniBatch& graph, SamplerType type) {
   graph_queue_[type]->push(graph);
 }
 
-void GraphHandle::initBinding(py::module &m) {
+void GraphHandle::initBinding(py::module& m) {
   py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle")
     .def_property_readonly("meta", &GraphHandle::getMeta)
     .def("init_meta", &GraphHandle::initMeta)
@@ -223,7 +227,7 @@ void GraphHandle::initBinding(py::module &m) {
     .def("add_sampler", &GraphHandle::addSampler);
 }
 
-void GraphHandle::createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app) {
+void GraphHandle::createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>>& app) {
   CHECK(app != nullptr);
   remote_ = std::make_unique<RemoteHandle>(app, this);
 }
@@ -246,7 +250,7 @@ std::shared_ptr<GraphHandle> StartServer() {
     auto ptr = std::make_unique<KVApp<GraphHandle>>();
     handle = ptr->getHandler();
     handle->createRemoteHandle(ptr);
-  });
+    });
   return handle;
 }
 

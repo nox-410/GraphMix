@@ -73,7 +73,7 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request& request, PSFData<Grap
   GraphMiniBatch result;
   bool success = false;
   for (auto sampler : valid_sampler) {
-    success = graph_queue_[sampler]->try_pop(result);
+    success = graph_queue_[sampler]->TryPop(&result);
     if (success) {
       std::get<4>(response) = static_cast<int>(sampler);
       break;
@@ -83,7 +83,7 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request& request, PSFData<Grap
   // If all samplers are not ready, use the one with lowest priority
   if (!success) {
     SamplerType final_wait_sampler = valid_sampler.back();
-    graph_queue_[final_wait_sampler]->pop(result);
+    graph_queue_[final_wait_sampler]->WaitAndPop(&result);
     std::get<4>(response) = static_cast<int>(final_wait_sampler);
   }
   std::get<0>(response) = result.f_feat;
@@ -161,7 +161,7 @@ void GraphHandle::stopSampling() {
   // Clean the queue so that sampelrs can stop
   GraphMiniBatch temp;
   for (auto& queue : graph_queue_) {
-    while (queue.second->try_pop(temp));
+    while (queue.second->TryPop(&temp));
   }
   for (SamplerPTR& sampler : samplers_)
     sampler->join();
@@ -170,7 +170,7 @@ void GraphHandle::stopSampling() {
 
 void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
   if (!graph_queue_.count(type)) {
-    auto ptr = std::make_unique<rigtorp::MPMCQueue<GraphMiniBatch>>(kserverBufferSize);
+    auto ptr = std::make_unique<ThreadsafeBoundedQueue<GraphMiniBatch>>(kserverBufferSize);
     graph_queue_.emplace(type, std::move(ptr));
   }
   SamplerPTR sampler;
@@ -213,7 +213,7 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
 }
 
 void GraphHandle::push(const GraphMiniBatch& graph, SamplerType type) {
-  graph_queue_[type]->push(graph);
+  graph_queue_[type]->Push(graph);
 }
 
 void GraphHandle::initBinding(py::module& m) {

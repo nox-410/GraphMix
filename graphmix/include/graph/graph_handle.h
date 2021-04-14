@@ -4,7 +4,7 @@
 #include "graph/remote_handle.h"
 #include "graph/sampler.h"
 #include "common/binding.h"
-#include "common/MPMCQueue.h"
+#include "common/bounded_queue.h"
 
 #include <map>
 
@@ -51,7 +51,7 @@ private:
   node_id local_offset_;
   py::dict dict_meta_;
 // ---------------------- sampler management -----------------------------------
-  std::map<SamplerType, std::unique_ptr<rigtorp::MPMCQueue<GraphMiniBatch>>> graph_queue_;
+  std::map<SamplerType, std::unique_ptr<ThreadsafeBoundedQueue<GraphMiniBatch>>> graph_queue_;
   std::vector<SamplerPTR> samplers_;
 // ---------------------- Remote data handle -----------------------------------
   std::unique_ptr<RemoteHandle> remote_;

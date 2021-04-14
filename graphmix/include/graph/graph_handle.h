@@ -17,8 +17,9 @@ public:
 
   void serve(const PSFData<NodePull>::Request &request, PSFData<NodePull>::Response &response);
   void serve(const PSFData<GraphPull>::Request &request, PSFData<GraphPull>::Response &response);
+  void serve(const PSFData<MetaPull>::Request &request, PSFData<MetaPull>::Response &response);
   static void initBinding(py::module &m);
-  void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset);
+  void initMeta(py::dict meta);
   void initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);
   void push(const GraphMiniBatch &graph, SamplerType type);
 
@@ -40,6 +41,7 @@ public:
     return py::make_tuple(remote_->cache_miss_cnt_, remote_->nonlocal_cnt_, remote_->total_cnt_);
   }
   void setReady();
+  py::dict getMeta() { return dict_meta_; }
   const static int kserverBufferSize=32;
 private:
 // ---------------------- static node data -------------------------------------
@@ -47,6 +49,7 @@ private:
   GraphMetaData meta_;
   node_id num_local_nodes_;
   node_id local_offset_;
+  py::dict dict_meta_;
 // ---------------------- sampler management -----------------------------------
   std::map<SamplerType, std::unique_ptr<rigtorp::MPMCQueue<GraphMiniBatch>>> graph_queue_;
   std::vector<SamplerPTR> samplers_;

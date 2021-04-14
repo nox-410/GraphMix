@@ -93,20 +93,37 @@ void GraphHandle::serve(const PSFData<GraphPull>::Request &request, PSFData<Grap
   std::get<5>(response) = result.extra;
 }
 
-void GraphHandle::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset) {
-  PYTHON_CHECK_ARRAY(offset);
-  meta_.f_len = f_len;
-  meta_.i_len = i_len;
+void GraphHandle::serve(const PSFData<MetaPull>::Request &request, PSFData<MetaPull>::Response &response) {
+  waitReady();
+  std::string s;
+  {
+    py::gil_scoped_acquire acquire;
+    s = py::str(dict_meta_);
+  }
+  SArray<char> meta(s.size());
+  std::copy(s.data(), s.data() + s.size(), meta.data());
+  std::get<0>(response) = meta;
+}
+
+void GraphHandle::initMeta(py::dict meta) {
+  dict_meta_ = meta;
+  // get graph data
+  meta_.f_len = meta["float_feature"].cast<size_t>();
+  meta_.i_len = meta["int_feature"].cast<size_t>();
+  meta_.num_nodes = meta["node"].cast<size_t>();
   meta_.rank = Postoffice::Get()->my_rank();
   meta_.nrank = Postoffice::Get()->num_servers();
+
+  // get partition data
+  py::list offset = meta["partition"]["offset"];
+  CHECK(int(offset.size()) == meta_.nrank);
   meta_.offset = std::vector<node_id>(meta_.nrank + 1);
-  assert(offset.size() == meta_.nrank + 1);
-  for (int i = 0; i < meta_.nrank + 1; i++)
-    meta_.offset[i] = offset.at(i);
+  for (int i = 0; i < meta_.nrank; i++)
+    meta_.offset[i] = offset[i].cast<node_id>();
+  meta_.offset.back() = meta_.num_nodes;
+
   num_local_nodes_ = meta_.offset[meta_.rank + 1] - meta_.offset[meta_.rank];
   local_offset_ = meta_.offset[meta_.rank];
-  meta_.num_nodes = meta_.offset[meta_.nrank];
-  nodes_.reserve(num_local_nodes_);
 }
 
 void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges) {
@@ -197,6 +214,7 @@ void GraphHandle::push(const GraphMiniBatch &graph, SamplerType type) {
 
 void GraphHandle::initBinding(py::module &m) {
   py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle")
+    .def_property_readonly("meta", &GraphHandle::getMeta)
     .def("init_meta", &GraphHandle::initMeta)
     .def("init_data", &GraphHandle::initData)
     .def("init_cache", &GraphHandle::initCache)

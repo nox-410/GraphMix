@@ -31,7 +31,8 @@ class Net(torch.nn.Module):
 
 class PytorchTrain():
     def __init__(self, args):
-        self.meta = args.meta
+        comm = graphmix._C.get_client()
+        self.meta = comm.meta
         dist.init_process_group(
             backend='nccl',
             init_method='env://',
@@ -141,8 +142,8 @@ def worker_main(args):
             print(test, printstr, file=log_file, flush=True)
 
 def server_init(server):
-    batch_size = 2000
-    label_rate = 0.65
+    batch_size = args.batch_size
+    label_rate = server.meta["train_node"] / server.meta["node"]
     server.init_cache(1, graphmix.cache.LFUOpt)
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size)
     server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2)

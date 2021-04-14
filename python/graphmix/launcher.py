@@ -45,12 +45,7 @@ def start_scheduler():
 def start_worker(func, args, graph_data_path):
     os.environ['DMLC_ROLE'] = "worker"
     _C.init()
-    local_rank = _C.rank() % args.num_local_worker
-    target_server = _C.rank() // args.num_local_worker * args.num_local_server  + _C.rank() % args.num_local_server
-    args.local_rank = local_rank
-    shard = Shard(graph_data_path, -1)
-    shard.init_worker(target_server)
-    args.meta = shard.meta
+    args.local_rank = _C.rank() % args.num_local_worker
     func(args)
     _C.finalize()
 

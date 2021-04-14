@@ -31,4 +31,9 @@ template<> struct PSFData<GraphPull> {
   >;
 };
 
+template<> struct PSFData<MetaPull> {
+  using Request = tuple<>;
+  using Response = tuple<SArray<char>>;
+};
+
 } // namespace ps

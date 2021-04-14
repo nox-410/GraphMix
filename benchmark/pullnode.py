@@ -17,7 +17,7 @@ def test(args):
     item_count = 0
     def pull_data():
         while True:
-            indices = np.random.randint(0, args.meta["node"], 1000)
+            indices = np.random.randint(0, comm.meta["node"], 1000)
             pack = graphmix._C.NodePack()
             query = comm.pull(indices, pack)
             comm.wait(query)

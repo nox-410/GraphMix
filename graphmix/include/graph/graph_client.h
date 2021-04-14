@@ -21,9 +21,11 @@ public:
   void waitData(query_t query);
   std::shared_ptr<PyGraph> resolveGraph(query_t query);
   static void initBinding(py::module &m);
-  void initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server);
   auto& getKVApp() { return kvapp_; }
+  py::dict getMeta() { return dict_meta_; }
+  void initMeta(py::dict meta);
 private:
+  py::dict dict_meta_;
   query_t pullData_impl(const node_id* indices, size_t n, NodePack &nodes);
   void waitTimestamp(int timestamp) { kvapp_->Wait(timestamp); }
   // used this hold to thread_pool return object

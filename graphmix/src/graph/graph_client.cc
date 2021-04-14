@@ -1,5 +1,7 @@
 #include "graph/graph_client.h"
 
+#include <pybind11/eval.h>
+
 int GraphClient::getserver(node_id idx) {
   int server = 0;
   while (idx >= meta_.offset[server + 1]) server++;
@@ -7,7 +9,20 @@ int GraphClient::getserver(node_id idx) {
 }
 
 GraphClient::GraphClient() {
+  py::gil_scoped_release release;
   kvapp_ = std::make_unique<KVApp<EmptyHandler>>();
+  PSFData<MetaPull>::Request request;
+  auto cb = [this](const PSFData<MetaPull>::Response &response) {
+    auto char_buf = std::get<0>(response);
+    std::string st(char_buf.begin(), char_buf.end());
+    {
+      py::gil_scoped_acquire acquire;
+      py::dict meta = py::eval(py::str(st)).cast<py::dict>();
+      initMeta(meta);
+    }
+  };
+  int ts = kvapp_->Request<MetaPull>(request, cb , 0);
+  kvapp_->Wait(ts);
 }
 
 GraphClient::query_t
@@ -116,26 +131,29 @@ std::shared_ptr<PyGraph> GraphClient::resolveGraph(query_t query) {
   return result;
 }
 
-void GraphClient::initMeta(size_t f_len, size_t i_len, py::array_t<node_id> offset, int target_server) {
-  PYTHON_CHECK_ARRAY(offset);
-  CHECK_LT(target_server, Postoffice::Get()->num_servers());
-  meta_.f_len = f_len;
-  meta_.i_len = i_len;
+void GraphClient::initMeta(py::dict meta) {
+  dict_meta_ = meta;
+  int target_server = Postoffice::Get()->my_rank() * Postoffice::Get()->num_servers() / Postoffice::Get()->num_workers();
+  meta_.f_len = meta["float_feature"].cast<size_t>();
+  meta_.i_len = meta["int_feature"].cast<size_t>();
+  meta_.num_nodes = meta["node"].cast<size_t>();
   meta_.rank = target_server;
   meta_.nrank = Postoffice::Get()->num_servers();
+    py::list offset = meta["partition"]["offset"];
+  CHECK(int(offset.size()) == meta_.nrank);
   meta_.offset = std::vector<node_id>(meta_.nrank + 1);
-  assert(offset.size() == meta_.nrank + 1);
-  for (int i = 0; i < meta_.nrank + 1; i++)
-    meta_.offset[i] = offset.at(i);
+  for (int i = 0; i < meta_.nrank; i++)
+    meta_.offset[i] = offset[i].cast<node_id>();
+  meta_.offset.back() = meta_.num_nodes;
 }
 
 void GraphClient::initBinding(py::module& m) {
   py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client")
+    .def_property_readonly("meta", &GraphClient::getMeta)
     .def("pull", &GraphClient::pullData)
     .def("pull_graph", &GraphClient::pullGraph)
     .def("wait", &GraphClient::waitData)
-    .def("resolve", &GraphClient::resolveGraph)
-    .def("init_meta", &GraphClient::initMeta);
+    .def("resolve", &GraphClient::resolveGraph);
   m.def("get_client", GraphClient::Get);
 }
 

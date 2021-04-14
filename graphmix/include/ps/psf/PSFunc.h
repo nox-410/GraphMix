@@ -14,6 +14,7 @@ namespace ps {
 enum PsfType {
   NodePull,
   GraphPull,
+  MetaPull,
   kNumPSfunction
 };
 

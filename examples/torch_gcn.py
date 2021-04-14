@@ -37,7 +37,8 @@ def torch_sync_data(*args):
     return t
 
 def worker_main(args):
-    meta = args.meta
+    comm = graphmix._C.get_client()
+    meta = comm.meta
     dist.init_process_group(
     	backend='nccl',
    		init_method='env://',
@@ -50,7 +51,6 @@ def worker_main(args):
     model = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
     optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 
-    comm = graphmix._C.get_client()
     query = comm.pull_graph()
     start = time.time()
     if dist.get_rank() == 0:
@@ -100,16 +100,19 @@ def worker_main(args):
                 eval_data()
 
 def server_init(server):
+    batch_size = args.batch_size
+    label_rate = server.meta["train_node"] / server.meta["node"]
     server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.LocalNode, batch_size=2000)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=400, depth=2, width=2)
-    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=1000, rw_length=2)
-    #server.add_sampler(graphmix.sampler.GlobalNode, batch_size=2708)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2)
+    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2)
+    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=batch_size)
     server.is_ready()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
+    parser.add_argument("--batch_size", default=300, type=int)
     # parser.add_argument("--path", "-p", required=True)
     args = parser.parse_args()
     graphmix.launcher(worker_main, args, server_init=server_init)

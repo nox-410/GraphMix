@@ -12,10 +12,12 @@ PYBIND11_MODULE(libc_graphmix, m) {
   m.doc() = "graphmix graph server C++ backend";
 
   m.def("init", []() {
+    py::gil_scoped_release release;
     if (Postoffice::Get()->van()) return;
     Postoffice::Get()->Start(0, nullptr, false);
     });
   m.def("finalize", []() {
+    py::gil_scoped_release release;
     Postoffice::Get()->Barrier(0, kWorkerGroup + kServerGroup + kScheduler);
     if (Postoffice::Get()->is_server()) {
       StartServer()->stopSampling();
@@ -35,8 +37,14 @@ PYBIND11_MODULE(libc_graphmix, m) {
   m.def("rank", []() { return Postoffice::Get()->my_rank(); });
   m.def("num_worker", []() { return Postoffice::Get()->num_workers(); });
   m.def("num_server", []() { return Postoffice::Get()->num_servers(); });
-  m.def("barrier", []() { Postoffice::Get()->Barrier(0, kWorkerGroup); });
-  m.def("barrier_all", []() { Postoffice::Get()->Barrier(0, kWorkerGroup | kServerGroup); });
+  m.def("barrier", []() {
+    py::gil_scoped_release release;
+    Postoffice::Get()->Barrier(0, kWorkerGroup);
+  });
+  m.def("barrier_all", []() {
+    py::gil_scoped_release release;
+    Postoffice::Get()->Barrier(0, kWorkerGroup | kServerGroup);
+  });
 
   m.def("start_server", StartServer);
 

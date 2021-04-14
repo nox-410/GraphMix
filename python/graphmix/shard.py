@@ -29,16 +29,7 @@ class Shard():
 
     def create_server(self):
         handler = _PS.start_server()
-        offset = self.meta["partition"]["offset"]
-        offset.append(self.meta["node"])
-        handler.init_meta(self.meta["float_feature"], self.meta["int_feature"], offset)
+        handler.init_meta(self.meta)
         handler.init_data(self.f_feat, self.i_feat, self.edges)
         print("Server {} data initialized at {}:{}".format(_PS.rank(), _PS.ip(), _PS.port()))
         return handler
-
-    def init_worker(self, target_server):
-        handler = _PS.get_client()
-        offset = self.meta["partition"]["offset"]
-        offset.append(self.meta["node"])
-        handler.init_meta(self.meta["float_feature"], self.meta["int_feature"], offset, target_server)
-        print("Worker {} start at {}:{} === Server {}".format(_PS.rank(), _PS.ip(), _PS.port(), target_server))

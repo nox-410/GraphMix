@@ -107,11 +107,34 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
   handle_->getRemote()->queryRemote(std::move(state));
 }
 
+GraphMiniBatch GraphSageSampler::SageConstruct(sampleState state_base) {
+  auto state = std::static_pointer_cast<_graphSageState>(state_base);
+  GraphMiniBatch graph;
+  size_t n = state->recvNodes.size();
+  graph.f_feat.resize(n * handle_->fLen());
+  graph.i_feat.resize(n * handle_->iLen());
+  std::unordered_map<node_id, node_id> idx_map;
+  for (auto &node : state->recvNodes)
+    idx_map[node.first] = idx_map.size();
+  for (auto &node : state->recvNodes) {
+    node_id idx = idx_map[node.first];
+    std::copy(node.second->f_feat.begin(), node.second->f_feat.end(), &graph.f_feat[idx * handle_->fLen()]);
+    std::copy(node.second->i_feat.begin(), node.second->i_feat.end(), &graph.i_feat[idx * handle_->iLen()]);
+  }
+  graph.csr_i.reserve(state->coo.size());
+  graph.csr_j.reserve(state->coo.size());
+  for (auto &pair : state->coo) {
+    graph.csr_i.push_back(idx_map[pair.first]);
+    graph.csr_j.push_back(idx_map[pair.second]);
+  }
+  return graph;
+}
+
 void GraphSageSampler::sample_once(sampleState state_base) {
   auto state = std::static_pointer_cast<_graphSageState>(state_base);
   if (state->expand_round == depth_) {
     // if ready
-    auto graph = construct(state->recvNodes);
+    auto graph = SageConstruct(state);
     graph.extra.reserve(state->recvNodes.size());
     for (auto &node : state->recvNodes) {
       if (state->core_node.count(node.first)) {
@@ -141,6 +164,8 @@ void GraphSageSampler::sample_once(sampleState state_base) {
       if (num_neighbor == 0) continue;
       auto rd = rd_.randInt(num_neighbor);
       node_id nxt_node = state->recvNodes[node]->edge[rd];
+      state->coo.emplace(nxt_node, node);
+      state->coo.emplace(node, nxt_node);
       if (!state->recvNodes.count(nxt_node))
         state->query_nodes.emplace(nxt_node);
       new_frontier.emplace(nxt_node);

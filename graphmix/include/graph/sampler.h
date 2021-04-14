@@ -2,6 +2,7 @@
 #include "graph/graph_type.h"
 #include "graph/random.h"
 #include <thread>
+#include <set>
 
 namespace ps {
 
@@ -32,6 +33,7 @@ class _graphSageState : public _sampleState {
 public:
   std::unordered_set<node_id> frontier;
   std::unordered_set<node_id> core_node;
+  std::set<std::pair<node_id, node_id>> coo;
   size_t expand_round = 0;
 };
 
@@ -102,6 +104,7 @@ public:
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kGraphSage; }
 private:
+  GraphMiniBatch SageConstruct(sampleState);
   RandomIndexSelecter rd_;
   size_t batch_size_;
   size_t depth_, width_;

@@ -87,11 +87,17 @@ GraphClient::pullGraph(py::args args) {
   data_mu.unlock();
   PSFData<GraphPull>::Request request(std::move(priority));
   auto cb = [cur_query, this] (const PSFData<GraphPull>::Response &response) {
+    auto &f_feat = std::get<0>(response);
+    auto &i_feat = std::get<1>(response);
     auto &csr_i = std::get<2>(response);
     auto &csr_j = std::get<3>(response);
-    auto graph = std::make_shared<PyGraph>(csr_i, csr_j, csr_i.size() - 1, "csr");
-    graph->setFeature(std::get<0>(response), std::get<1>(response));
-    graph->setTag(std::get<4>(response));
+    int tag = std::get<4>(response);
+    size_t num_nodes = f_feat.size() / meta_.f_len;
+    // only for graphsage minibatch, coo-format are used
+    std::string format = tag == static_cast<int>(SamplerType::kGraphSage) ? "coo" : "csr";
+    auto graph = std::make_shared<PyGraph>(csr_i, csr_j, num_nodes, format);
+    graph->setFeature(f_feat, i_feat);
+    graph->setTag(tag);
     graph->setExtra(std::get<5>(response));
     graph_map_[cur_query] = graph;
   };

@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import os
 import ssl
-from six.moves import urllib
+import urllib.request
 import zipfile
 
 def download_url(url, folder):

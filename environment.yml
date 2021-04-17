@@ -12,6 +12,7 @@ dependencies:
   - libprotobuf
   - zeromq
   - pip
+  - scipy
 # the following are just for running tests and examples
   - pytorch
   - tensorflow

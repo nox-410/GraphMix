@@ -1,6 +1,6 @@
 name: graphmix
 channels:
-  - conda-forge
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
 dependencies:
   - python=3.9
   - metis
@@ -13,6 +13,6 @@ dependencies:
   - zeromq
   - pip
   - scipy
-# the following are just for running tests and examples
-  - pytorch
-  - tensorflow
+  # the following are just for running tests and examples
+  # - pytorch
+  # - tensorflow

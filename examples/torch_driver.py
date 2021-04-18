@@ -117,18 +117,18 @@ class PytorchTrain():
         return t
 
 def worker_main(args):
+    from graphmix.utils import powerset
     driver = PytorchTrain(args)
     mapping = {
         "G" : graphmix.sampler.GraphSage,
         "R" : graphmix.sampler.RandomWalk,
         "L" : graphmix.sampler.LocalNode,
-        "F" : graphmix.sampler.GlobalNode,
     }
-    tests = ("G", "R", "L", "F", "GR", "GL", "GF",
-    "RL", "RF", "LF", "GRL", "GRF", "GLF", "GRLF")
+    tests = powerset("GRL")
     if graphmix._C.rank() == 0:
         log_file = open("log.txt", "w")
     for test in tests:
+        test = "".join(test)
         samplers = list(map(mapping.get, test))
         accs, epochs = [], []
         for i in range(10):
@@ -145,10 +145,9 @@ def server_init(server):
     batch_size = args.batch_size
     label_rate = server.meta["train_node"] / server.meta["node"]
     server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2)
-    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2)
-    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=batch_size)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size, thread=4)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2, thread=4)
+    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2, thread=4)
     server.is_ready()
 
 if __name__ =='__main__':

@@ -114,7 +114,8 @@ void RemoteHandle::queryRemote(sampleState state) {
 
 void RemoteHandle::filterNode(sampleState &state) {
   size_t local_cnt = 0;
-  state->recvNodes.reserve(state->recvNodes.size() + state->query_nodes.size());
+  size_t num_query = state->query_nodes.size();
+  state->recvNodes.reserve(state->recvNodes.size() + num_query);
   for (auto iter=state->query_nodes.begin(); iter != state->query_nodes.end();) {
     node_id node = *iter;
     if (handle_->isLocalNode(node)) {
@@ -134,8 +135,8 @@ void RemoteHandle::filterNode(sampleState &state) {
   }
   // Handle profile data
   cache_mtx_.lock();
-  total_cnt_ += state->recvNodes.size();
-  nonlocal_cnt_ += state->recvNodes.size() - local_cnt;
+  total_cnt_ += num_query;
+  nonlocal_cnt_ += num_query - local_cnt;
   cache_miss_cnt_ += state->query_nodes.size();
   cache_mtx_.unlock();
 }

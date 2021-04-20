@@ -21,13 +21,13 @@ PYBIND11_MODULE(libc_graphmix, m) {
     Postoffice::Get()->Barrier(0, kWorkerGroup + kServerGroup + kScheduler);
     if (Postoffice::Get()->is_server()) {
       StartServer()->stopSampling();
-      // Postoffice::Get()->RegisterExitCallback([]() {
-      //   StartServer()->getRemote().reset();
-      // });
+      Postoffice::Get()->RegisterExitCallback([]() {
+        StartServer()->getRemote().reset();
+      });
     } else if (Postoffice::Get()->is_worker()) {
-      // Postoffice::Get()->RegisterExitCallback([]() {
-      //   GraphClient::Get()->getKVApp().reset();
-      // });
+      Postoffice::Get()->RegisterExitCallback([]() {
+        GraphClient::Get()->getKVApp().reset();
+      });
     }
     Postoffice::Get()->Finalize(0, true);
   });

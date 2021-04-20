@@ -62,7 +62,8 @@ private:
         rmsg.meta = msg.meta;
         rmsg.meta.recver = msg.meta.sender;
         rmsg.meta.request = false;
-        Postoffice::Get()->van()->Send(rmsg);
+        if (Postoffice::Get()->van()->IsReady())
+          Postoffice::Get()->van()->Send(rmsg);
       }
     } else {
       typename PSFData<ftype>::Response response;

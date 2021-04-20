@@ -45,6 +45,7 @@ class PytorchTrain():
             self.dataset = load_dataset(self.meta["name"])
 
     def train_once(self, samplers):
+        self.eval_acc = []
         meta = self.meta
         device = self.device
         model = Net(meta["float_feature"], meta["class"], args.hidden).cuda(device)
@@ -88,6 +89,7 @@ class PytorchTrain():
                     break
                 if dist.get_rank() == 0:
                     cur_result = self.eval_data(model)
+                    self.eval_acc.append(cur_result)
                     if cur_result > best_result:
                         best_result = cur_result
                         converge_epoch = num_epoch
@@ -125,6 +127,7 @@ def worker_main(args):
         "L" : graphmix.sampler.LocalNode,
     }
     tests = powerset("GRL")
+    train_dict = {}
     if graphmix._C.rank() == 0:
         log_file = open("log.txt", "w")
     for test in tests:
@@ -140,6 +143,10 @@ def worker_main(args):
                 np.mean(accs), np.std(accs), np.mean(epochs), np.std(epochs))
             print(test, printstr)
             print(test, printstr, file=log_file, flush=True)
+            train_dict["{}{}".format(test, i)]=driver.eval_acc
+    if graphmix._C.rank() == 0:
+        with open("train_data.yml", "w") as f:
+            f.write(yaml.dump(train_dict))
 
 def server_init(server):
     batch_size = args.batch_size

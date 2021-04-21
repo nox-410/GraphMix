@@ -138,7 +138,7 @@ def load_dataset(name):
         dataset = PlanetoidDataset(root, name)
     elif name=="Reddit":
         dataset = RedditDataset(root)
-    elif name=="ogbn-products" or name=="ogbn-papers100M":
+    elif name=="ogbn-products" or name=="ogbn-papers100M" or name=='ogbn-arxiv':
         dataset = OGBDataset(root, name)
     else:
         raise NotImplementedError

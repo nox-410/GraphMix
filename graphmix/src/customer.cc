@@ -15,7 +15,7 @@ Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv
   Postoffice::Get()->AddCustomer(this);
   int num_threads = GetEnv("PS_WORKER_THREAD", 1);;
   if (Postoffice::Get()->is_server()) {
-    num_threads = GetEnv("PS_SERVER_THREAD", 5);
+    num_threads = GetEnv("PS_SERVER_THREAD", 10);
   }
   for(int i = 0; i < num_threads; i++) {
       recv_threads_.emplace_back(new std::thread(&Customer::Receiving, this));

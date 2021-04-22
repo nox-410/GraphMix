@@ -55,7 +55,7 @@ void Van::ProcessAddNodeCommandAtScheduler(Message* msg, Meta* nodes,
     // sort the nodes according their ip and port,
     std::sort(nodes->control.node.begin(), nodes->control.node.end(),
               [](const Node& a, const Node& b) {
-                return (a.hostname.compare(b.hostname) | (a.port < b.port)) > 0;
+                return a.hostname.compare(b.hostname) ? a.hostname.compare(b.hostname) < 0 : a.port < b.port;
               });
     // assign node rank
     for (auto& node : nodes->control.node) {

@@ -16,9 +16,15 @@ def part_graph(dataset_name, nparts, output_path):
     print("step2: partition graph complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
     float_feature = dataset.x.astype(np.float32)
-    int_feature = np.vstack([dataset.y, dataset.train_mask]).T.astype(np.int32)
+
+    # process labels and train_mask
+    y_feat = dataset.y
+    if len(y_feat.shape) == 1:
+        y_feat = y_feat.reshape(-1, 1)
+    int_feature = np.concatenate([y_feat, dataset.train_mask.reshape(-1, 1)], axis=1).astype(np.int32)
     if args.nodeid:
         int_feature = np.concatenate([int_feature, np.arange(dataset.graph.num_nodes).reshape(-1, 1)], axis=1)
+
     for i in range(nparts):
         part_dict = partition[i]
         part_dir = os.path.join(output_path, "part{}".format(i))

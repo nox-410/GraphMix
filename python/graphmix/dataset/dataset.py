@@ -4,6 +4,7 @@ import os
 import numpy as np
 import scipy.sparse as sp
 import pickle
+import json
 
 from .utils import download_url, process_graph, extract_zip
 
@@ -119,6 +120,48 @@ class OGBDataset():
         self.train_mask[train_idx] = True
         self.num_classes = dataset.num_classes
 
+class YelpDataset():
+    def __init__(self, root):
+        adj_full_id = '1Juwx8HtDwSzmVIJ31ooVa1WljI4U5JnA'
+        feats_id = '1Zy6BZH_zLEjKlEFSduKE5tV9qqA_8VtM'
+        class_map_id = '1VUcBGr0T0-klqerjAjxRmAqFuld_SMWU'
+        role_id = '1NI5pa5Chpd-52eSmLW60OnB3WS5ikxq_'
+
+        from google_drive_downloader import GoogleDriveDownloader as gdd
+
+        path = os.path.join(root, 'adj_full.npz')
+        gdd.download_file_from_google_drive(adj_full_id, path)
+        path = os.path.join(root, 'feats.npy')
+        gdd.download_file_from_google_drive(feats_id, path)
+        path = os.path.join(root, 'class_map.json')
+        gdd.download_file_from_google_drive(class_map_id, path)
+        path = os.path.join(root, 'role.json')
+        gdd.download_file_from_google_drive(role_id, path)
+
+        preprocess_class_map = os.path.join(root, 'processed.npy')
+        if os.path.exists(preprocess_class_map):
+            class_arr = np.load(preprocess_class_map)
+        else:
+            class_map = json.load(open(os.path.join(root, 'class_map.json')))
+            class_arr = np.empty(shape=[len(class_map), 100], dtype=np.int32)
+            for i in range(len(class_map)):
+                class_arr[i] = class_map[str(i)]
+            np.save(preprocess_class_map, class_arr)
+        num_nodes = class_arr.shape[0]
+        role_map = json.load(open(os.path.join(root, 'role.json')))
+        f = np.load(os.path.join(root, 'adj_full.npz'))
+        adj = sp.csr_matrix((f['data'], f['indices'], f['indptr']), f['shape'])
+        adj = adj.tocoo()
+        self.graph = _C.Graph(
+            edge_index=np.vstack([adj.row, adj.col]),
+            num_nodes=num_nodes
+        )
+        self.train_mask = np.zeros(num_nodes, dtype=np.bool)
+        self.train_mask[role_map['tr']] = True
+        self.x = np.load(os.path.join(root, 'feats.npy'))
+        self.y = class_arr
+        self.num_classes = class_arr.shape[1]
+
 def get_dataset_path(dataset_name):
     if "HOME" not in os.environ.keys():
         raise Exception("$HOME environ not set, cannot find datasetroot.")
@@ -138,6 +181,8 @@ def load_dataset(name):
         dataset = PlanetoidDataset(root, name)
     elif name=="Reddit":
         dataset = RedditDataset(root)
+    elif name=="Yelp":
+        dataset = YelpDataset(root)
     elif name=="ogbn-products" or name=="ogbn-papers100M" or name=='ogbn-arxiv':
         dataset = OGBDataset(root, name)
     else:

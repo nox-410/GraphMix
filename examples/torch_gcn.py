@@ -6,35 +6,10 @@ import time
 import random
 
 import graphmix
-from graphmix.torch import SageConv, mp_matrix
-from graphmix.dataset import load_dataset
 import torch
-import torch.nn as nn
 import torch.distributed as dist
-import torch.nn.functional as F
 
-class Net(torch.nn.Module):
-    def __init__(self, dim_in, dim_out, hidden):
-        super(Net, self).__init__()
-        self.conv1 = SageConv(dim_in, hidden, activation="relu", dropout=0.1)
-        self.conv2 = SageConv(2*hidden, hidden, activation="relu", dropout=0.1)
-        self.classifier = torch.nn.Linear(2*hidden, dim_out)
-        torch.nn.init.xavier_uniform_(self.classifier.weight)
-
-    def forward(self, x, graph):
-        edge_norm = mp_matrix(graph, x.device)
-        x = self.conv1(x, edge_norm)
-        x = self.conv2(x, edge_norm)
-        x = F.normalize(x, p=2, dim=1)
-        x = self.classifier(x)
-        return x
-
-def torch_sync_data(*args):
-    # all-reduce train stats
-    t = torch.tensor(args, dtype=torch.float64, device='cuda')
-    dist.barrier()  # synchronizes all processes
-    dist.all_reduce(t, op=torch.distributed.ReduceOp.SUM)
-    return t
+from torch_model import torch_sync_data, Net
 
 def worker_main(args):
     comm = graphmix._C.get_client()
@@ -48,8 +23,8 @@ def worker_main(args):
     device = args.local_rank
     torch.cuda.set_device(device)
     model = Net(meta["float_feature"], meta["class"], 128).cuda(device)
-    model = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
-    optimizer = torch.optim.Adam(model.parameters(), 1e-3)
+    DDPmodel = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
+    optimizer = torch.optim.Adam(DDPmodel.parameters(), 1e-3)
 
     query = comm.pull_graph()
     batch_num = meta["node"] // (args.batch_size * dist.get_world_size())
@@ -67,18 +42,17 @@ def worker_main(args):
             if graph.tag == graphmix.sampler.GraphSage:
                 train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
             else:
-                train_mask = y[:,1]==1
-            label = y[:,0]
-            out = model(x, graph)
-            loss = F.cross_entropy(out, label, reduction='none')
-            loss = loss * train_mask
-            loss = loss.sum() / train_mask.sum()
+                train_mask = y[ : , -1] == 1
+            label = y[ : , : -1]
+            out = DDPmodel(x, graph)
+            loss = model.loss(out, label, train_mask)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
             total += train_mask.sum()
-            count += int(((out.argmax(axis=1) == label)*train_mask).sum())
+            acc = model.metrics(out, label, train_mask)
+            count += int(train_mask.sum() * acc)
         epoch_end_time = time.time()
         count, total, wait_time = torch_sync_data(count, total, wait_time)
         if args.local_rank == 0:

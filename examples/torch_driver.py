@@ -13,21 +13,7 @@ import torch.nn as nn
 import torch.distributed as dist
 import torch.nn.functional as F
 
-class Net(torch.nn.Module):
-    def __init__(self, dim_in, dim_out, hidden):
-        super(Net, self).__init__()
-        self.conv1 = SageConv(dim_in, hidden, activation="relu", dropout=0.1)
-        self.conv2 = SageConv(2*hidden, hidden, activation="relu", dropout=0.1)
-        self.classifier = torch.nn.Linear(2*hidden, dim_out)
-        torch.nn.init.xavier_uniform_(self.classifier.weight)
-
-    def forward(self, x, graph):
-        edge_norm = mp_matrix(graph, x.device)
-        x = self.conv1(x, edge_norm)
-        x = self.conv2(x, edge_norm)
-        x = F.normalize(x, p=2, dim=1)
-        x = self.classifier(x)
-        return x
+from torch_model import torch_sync_data, Net
 
 class PytorchTrain():
     def __init__(self, args):
@@ -49,8 +35,8 @@ class PytorchTrain():
         meta = self.meta
         device = self.device
         model = Net(meta["float_feature"], meta["class"], args.hidden).cuda(device)
-        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
-        optimizer = torch.optim.Adam(model.parameters(), 1e-3)
+        DDPmodel = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
+        optimizer = torch.optim.Adam(DDPmodel.parameters(), 1e-3)
         num_nodes, num_epoch = 0, 0
         comm = graphmix._C.get_client()
         query = comm.pull_graph()
@@ -68,19 +54,16 @@ class PytorchTrain():
             if graph.tag == graphmix.sampler.GraphSage:
                 train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
             else:
-                train_mask = y[:,1]==1
-            label = y[:,0]
-            out = model(x, graph)
-            loss = F.cross_entropy(out, label, reduction='none')
-            loss = loss * train_mask
-            total = train_mask.sum()
-            loss = loss.sum() / total
+                train_mask = y[ : , -1] == 1
+            out = DDPmodel(x, graph)
+            label = y[ : , : -1]
+            loss = model.loss(out, label, train_mask)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
-            count = int(((out.argmax(axis=1) == label)*train_mask).sum())
-            count, total, loss = self.torch_sync_data(count, total, loss)
+            total = train_mask.sum()
+            total = torch_sync_data(total)
             num_nodes += total
             if num_nodes >= meta["train_node"]:
                 num_epoch += 1
@@ -105,18 +88,9 @@ class PytorchTrain():
             label = torch.Tensor(dataset.y).to(device, torch.long)
             out = model(x, dataset.graph)
             eval_mask = torch.Tensor(dataset.train_mask==0).to(device)
-            count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
-            total = eval_mask.sum()
+            f1_score = model.metrics(out, label, eval_mask)
             model.train()
-            return float(count/total)
-
-    @staticmethod
-    def torch_sync_data(*args):
-        # all-reduce train stats
-        t = torch.tensor(args, dtype=torch.float64, device='cuda')
-        dist.barrier()  # synchronizes all processes
-        dist.all_reduce(t, op=torch.distributed.ReduceOp.SUM)
-        return t
+            return f1_score
 
 def worker_main(args):
     from graphmix.utils import powerset

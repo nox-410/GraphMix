@@ -9,7 +9,7 @@ using namespace ps;
 
 class GraphClient {
 public:
-  GraphClient();
+  GraphClient(int port = -1);
   static std::shared_ptr<GraphClient> Get();
   // for data push&pull
   typedef uint64_t query_t;
@@ -37,5 +37,6 @@ private:
   std::unique_ptr<KVApp<EmptyHandler>> kvapp_;
   GraphMetaData meta_;
   threadsafe_unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
+  bool stand_alone_;
   int getserver(node_id idx);
 };

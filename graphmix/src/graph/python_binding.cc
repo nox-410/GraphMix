@@ -2,7 +2,7 @@
 #include "graph/graph_handle.h"
 #include "common/binding.h"
 #include "graph/graph.h"
-#include "cli.h"
+#include "ps/client.h"
 
 #include <pybind11/stl_bind.h>
 
@@ -65,9 +65,6 @@ PYBIND11_MODULE(libc_graphmix, m) {
     .value("RandomWalk", SamplerType::kRandomWalk)
     .value("GraphSage", SamplerType::kGraphSage)
     .value("None", SamplerType::kNumSamplerType);
-  using graphmix::Client;
-  py::class_<Client, std::unique_ptr<Client>>(m, "cli")
-    .def(py::init<int>());
 
   GraphClient::initBinding(m);
   GraphHandle::initBinding(m);

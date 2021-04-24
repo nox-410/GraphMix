@@ -125,10 +125,16 @@ class ZMQVan : public Van {
       CHECK(rc == 0 || errno == ETERM);
       CHECK_EQ(zmq_close(sender), 0);
       senders_.erase(msg.meta.sender);
-      PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Leave " << msg.meta.sender;
+      PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Leave from port " << msg.meta.sender;
     } else if (msg.meta.control.cmd == Control::ARRIVE) {
       connectBack(msg.meta.sender);
-      PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Arrive " << msg.meta.sender;
+      Message rmsg;
+      rmsg.meta.recver = msg.meta.sender;
+      if (IsReady()) {
+        rmsg.meta.control.cmd = Control::ARRIVE;
+        PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Arrive from port " << msg.meta.sender;
+      }
+      SendMsg(rmsg);
     }
   }
 

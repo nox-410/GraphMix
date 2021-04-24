@@ -39,7 +39,7 @@ class Customer {
    * \param customer_id the locally unique id indicating the customer of a postoffice
    * \param recv_handle the functino for processing a received message
    */
-  Customer(int app_id, int customer_id, const RecvHandle& recv_handle);
+  Customer(int app_id, int customer_id, const RecvHandle& recv_handle, bool stand_alone = false);
 
   /**
    * \brief desconstructor
@@ -99,6 +99,8 @@ class Customer {
   int app_id_;
 
   int customer_id_;
+
+  bool stand_alone_;
 
   RecvHandle recv_handle_;
   ThreadsafePQueue recv_queue_;

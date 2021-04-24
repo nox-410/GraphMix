@@ -5,6 +5,7 @@
 #include "ps/internal/customer.h"
 #include "ps/internal/message.h"
 #include "callback_store.h"
+#include "client.h"
 #include <memory>
 #include <vector>
 namespace ps {
@@ -15,13 +16,17 @@ class EmptyHandler {};
 template<class Handler>
 class KVApp {
 public:
-  explicit KVApp(int app_id=0, int customer_id=0, std::shared_ptr<Handler> handler=nullptr) {
+  explicit KVApp(int app_id=0, int customer_id=0, std::shared_ptr<Handler> handler=nullptr, int port = -1) {
+    stand_alone_ = port > 0;
     handler_ = handler ? handler : std::make_shared<Handler>();
     _init_message_handlers<PsfType(0)>();
     customer_.reset(new Customer(
       app_id, customer_id,
-      std::bind(&KVApp::_process, this, std::placeholders::_1)
+      std::bind(&KVApp::_process, this, std::placeholders::_1),
+      stand_alone_
     ));
+    if (stand_alone_)
+      cli_ = std::make_unique<graphmix::Client>(port, customer_);
   }
   ~KVApp() {
     // Free customer first, so that recv threads can end safely
@@ -38,10 +43,15 @@ public:
     msg.meta.app_id = customer_->app_id();
     msg.meta.customer_id = customer_->customer_id();
     msg.meta.timestamp = timestamp;
-    msg.meta.recver = Postoffice::Get()->ServerRankToID(target_server_id);
     msg.meta.psftype = ftype;
     msg.meta.request = true;
-    Postoffice::Get()->van()->Send(msg);
+    if (stand_alone_) {
+      msg.meta.recver = 0;
+      cli_->SendMsg(msg);
+    } else {
+      msg.meta.recver = Postoffice::Get()->ServerRankToID(target_server_id);
+      Postoffice::Get()->van()->Send(msg);
+    }
     return timestamp;
   }
   std::shared_ptr<Handler> getHandler() { return handler_; }
@@ -87,8 +97,10 @@ private:
     }
   }
   std::shared_ptr<Handler> handler_;
-  std::unique_ptr<Customer> customer_;
+  std::shared_ptr<Customer> customer_;
+  std::unique_ptr<graphmix::Client> cli_;
   Customer::RecvHandle _message_handlers[kNumPSfunction];
+  bool stand_alone_;
 };
 
 } // namespace ps

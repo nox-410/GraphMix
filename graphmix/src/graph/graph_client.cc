@@ -8,9 +8,10 @@ int GraphClient::getserver(node_id idx) {
   return server;
 }
 
-GraphClient::GraphClient() {
+GraphClient::GraphClient(int port) {
   py::gil_scoped_release release;
-  kvapp_ = std::make_unique<KVApp<EmptyHandler>>();
+  stand_alone_ = port > 0;
+  kvapp_ = std::make_unique<KVApp<EmptyHandler>>(0, 0, nullptr, port);
   PSFData<MetaPull>::Request request;
   auto cb = [this](const PSFData<MetaPull>::Response &response) {
     auto char_buf = std::get<0>(response);
@@ -27,6 +28,7 @@ GraphClient::GraphClient() {
 
 GraphClient::query_t
 GraphClient::pullData(py::array_t<node_id> indices, NodePack &nodes) {
+  CHECK(!stand_alone_) << "PullNode under standalone mode is not implemented.";
   PYTHON_CHECK_ARRAY(indices);
   return pullData_impl(indices.data(), indices.size(), nodes);
 }
@@ -38,7 +40,7 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
   query_t cur_query = next_query++;
   auto& timestamps = query2timestamp[cur_query];
   data_mu.unlock();
-  int nserver = Postoffice::Get()->num_servers();
+  int nserver = meta_.nrank;
   std::vector<SArray<node_id>> keys(nserver);
   nodes.reserve(n);
   for (size_t i = 0; i < n; i++) {
@@ -139,18 +141,25 @@ std::shared_ptr<PyGraph> GraphClient::resolveGraph(query_t query) {
 
 void GraphClient::initMeta(py::dict meta) {
   dict_meta_ = meta;
-  int target_server = Postoffice::Get()->my_rank() * Postoffice::Get()->num_servers() / Postoffice::Get()->num_workers();
+  if (stand_alone_)
+    meta_.rank = 0;
+  else
+    // decide which server to use
+    meta_.rank = Postoffice::Get()->my_rank() * Postoffice::Get()->num_servers() / Postoffice::Get()->num_workers();
   meta_.f_len = meta["float_feature"].cast<size_t>();
   meta_.i_len = meta["int_feature"].cast<size_t>();
   meta_.num_nodes = meta["node"].cast<size_t>();
-  meta_.rank = target_server;
-  meta_.nrank = Postoffice::Get()->num_servers();
+  meta_.nrank = meta["num_part"].cast<size_t>();
     py::list offset = meta["partition"]["offset"];
   CHECK(int(offset.size()) == meta_.nrank);
   meta_.offset = std::vector<node_id>(meta_.nrank + 1);
   for (int i = 0; i < meta_.nrank; i++)
     meta_.offset[i] = offset[i].cast<node_id>();
   meta_.offset.back() = meta_.num_nodes;
+}
+
+std::shared_ptr<GraphClient> createClient(int port) {
+  return std::make_shared<GraphClient>(port);
 }
 
 void GraphClient::initBinding(py::module& m) {
@@ -161,12 +170,12 @@ void GraphClient::initBinding(py::module& m) {
     .def("wait", &GraphClient::waitData)
     .def("resolve", &GraphClient::resolveGraph);
   m.def("get_client", GraphClient::Get);
+  m.def("creat_client", createClient);
 }
 
 std::shared_ptr<GraphClient> GraphClient::Get() {
   static std::shared_ptr<GraphClient> ptr;
   static std::once_flag oc;
-  CHECK(Postoffice::Get()->is_worker());
   std::call_once(oc, []() { ptr = std::make_shared<GraphClient>(); });
   return ptr;
 }

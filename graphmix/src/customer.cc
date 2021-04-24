@@ -9,13 +9,16 @@ namespace ps {
 const int Node::kEmpty = std::numeric_limits<int>::max();
 const int Meta::kEmpty = std::numeric_limits<int>::max();
 
-Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv_handle)
+Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv_handle, bool stand_alone)
     : app_id_(app_id), customer_id_(customer_id), recv_handle_(recv_handle) {
   cur_timestamp = 0;
-  Postoffice::Get()->AddCustomer(this);
-  int num_threads = GetEnv("PS_WORKER_THREAD", 1);;
-  if (Postoffice::Get()->is_server()) {
-    num_threads = GetEnv("PS_SERVER_THREAD", 10);
+  stand_alone_ = stand_alone;
+  int num_threads = GetEnv("PS_WORKER_THREAD", 1);
+  if (!stand_alone_) {
+    Postoffice::Get()->AddCustomer(this);
+    if (Postoffice::Get()->is_server()) {
+      num_threads = GetEnv("PS_SERVER_THREAD", 10);
+    }
   }
   for(int i = 0; i < num_threads; i++) {
       recv_threads_.emplace_back(new std::thread(&Customer::Receiving, this));
@@ -23,7 +26,8 @@ Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv
 }
 
 Customer::~Customer() {
-  Postoffice::Get()->RemoveCustomer(this);
+  if (!stand_alone_)
+    Postoffice::Get()->RemoveCustomer(this);
   Message msg;
   msg.meta.control.cmd = Control::TERMINATE;
   recv_queue_.Push(msg);

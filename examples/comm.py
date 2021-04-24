@@ -21,11 +21,11 @@ def test(args):
     num_node = comm.meta["node"]
     num_batch = num_node // args.batch_size
     print("{} batch per epoch".format(num_batch))
-    for epoch in range(5):
+    for epoch in range(20):
         for i in range(num_batch):
             query = comm.pull_graph()
             graph = comm.resolve(query)
-        if epoch == 2:
+        if epoch == 10:
             time.sleep(1)
             graphmix._C.barrier_all()
     time.sleep(1)
@@ -40,9 +40,9 @@ def server_init(server):
     )
     batch_size = args.batch_size
     label_rate = server.meta["train_node"] / server.meta["node"]
-    server.init_cache(0.1, graphmix.cache.LFUOpt)
+    server.init_cache(args.cache_size, eval("graphmix.cache.{}".format(args.cache_method)))
     #server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2, thread=4)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=5, thread=4, index=100)
     #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2, thread=4)
     #server.add_sampler(graphmix.sampler.GlobalNode, batch_size=batch_size)
     server.is_ready()
@@ -64,5 +64,7 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="../config/test_config.yml")
     parser.add_argument("--batch_size", default=300, type=int)
+    parser.add_argument("--cache_size", default=0.1, type=float)
+    parser.add_argument("--cache_method", default="LFUOpt", type=str)
     args = parser.parse_args()
     graphmix.launcher(test, args, server_init=server_init)

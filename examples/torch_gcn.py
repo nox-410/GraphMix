@@ -40,10 +40,10 @@ def worker_main(args):
     comm = graphmix._C.get_client()
     meta = comm.meta
     dist.init_process_group(
-    	backend='nccl',
-   		init_method='env://',
-    	world_size=graphmix._C.num_worker(),
-    	rank=graphmix._C.rank()
+        backend='nccl',
+        init_method='env://',
+        world_size=graphmix._C.num_worker(),
+        rank=graphmix._C.rank()
     )
     device = args.local_rank
     torch.cuda.set_device(device)
@@ -52,67 +52,55 @@ def worker_main(args):
     optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 
     query = comm.pull_graph()
-    start = time.time()
-    if dist.get_rank() == 0:
-        dataset = load_dataset(meta["name"])
-        best_result = 0
-    def eval_data():
-        nonlocal best_result
-        with torch.no_grad():
-            model.eval()
-            x = torch.Tensor(dataset.x).to(device)
-            label = torch.Tensor(dataset.y).to(device, torch.long)
-            out = model(x, dataset.graph)
-            eval_mask = torch.Tensor(dataset.train_mask==0).to(device)
-            count = int(((out.argmax(axis=1) == label)*eval_mask).sum())
-            total = eval_mask.sum()
-            best_result = max(best_result, float(count/total))
-            print(float(count/total), best_result)
-            model.train()
-    samplers = [graphmix.sampler.LocalNode, graphmix.sampler.GlobalNode,
-        graphmix.sampler.GraphSage, graphmix.sampler.RandomWalk]
-    for i in range(1000):
-        random.shuffle(samplers)
-        graph = comm.resolve(query)
-        graph.add_self_loop()
-        query = comm.pull_graph(*samplers)
-        x = torch.Tensor(graph.f_feat).to(device)
-        y = torch.Tensor(graph.i_feat).to(device, torch.long)
-        if graph.tag == graphmix.sampler.GraphSage:
-            train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
-        else:
-            train_mask = y[:,1]==1
-        label = y[:,0]
-        out = model(x, graph)
-        loss = F.cross_entropy(out, label, reduction='none')
-        loss = loss * train_mask
-        total = train_mask.sum()
-        loss = loss.sum() / total
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+    batch_num = meta["node"] // (args.batch_size * dist.get_world_size())
+    for epoch in range(args.num_epoch):
+        epoch_start_time = time.time()
+        count, total, wait_time = 0, 0, 0
+        for i in range(batch_num):
+            wait_start = time.time()
+            graph = comm.resolve(query)
+            wait_time += time.time() - wait_start
+            graph.add_self_loop()
+            query = comm.pull_graph()
+            x = torch.Tensor(graph.f_feat).to(device)
+            y = torch.Tensor(graph.i_feat).to(device, torch.long)
+            if graph.tag == graphmix.sampler.GraphSage:
+                train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
+            else:
+                train_mask = y[:,1]==1
+            label = y[:,0]
+            out = model(x, graph)
+            loss = F.cross_entropy(out, label, reduction='none')
+            loss = loss * train_mask
+            loss = loss.sum() / train_mask.sum()
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
 
-        count = int(((out.argmax(axis=1) == label)*train_mask).sum())
-        count, total, loss = torch_sync_data(count, total, loss)
-        if dist.get_rank() == 0:
-            print("batchnum={} loss={:.5f} acc={:.5f}".format(i, loss / dist.get_world_size(), count/total))
-            if i % 100 == 0 and i > 0:
-                eval_data()
+            total += train_mask.sum()
+            count += int(((out.argmax(axis=1) == label)*train_mask).sum())
+        epoch_end_time = time.time()
+        count, total, wait_time = torch_sync_data(count, total, wait_time)
+        if args.local_rank == 0:
+            print("epoch {} time {:.3f} acc={:.3f}".format(epoch, epoch_end_time-epoch_start_time, count/total))
+            print("wait time total : {:.3f}sec".format(wait_time / dist.get_world_size()))
 
 def server_init(server):
     batch_size = args.batch_size
     label_rate = server.meta["train_node"] / server.meta["node"]
-    server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2)
-    server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2)
-    server.add_sampler(graphmix.sampler.GlobalNode, batch_size=batch_size)
+    server.init_cache(args.cache_size, graphmix.cache.LFUOpt)
+    worker_per_server = graphmix._C.num_worker() // graphmix._C.num_server()
+    #server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size, thread=4 * worker_per_server)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2, thread=4 * worker_per_server)
+    #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2, thread=4 * worker_per_server)
     server.is_ready()
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
-    parser.add_argument("--batch_size", default=300, type=int)
+    parser.add_argument("--batch_size", default=4000, type=int)
+    parser.add_argument("--num_epoch", default=100, type=int)
+    parser.add_argument("--cache_size", default=0.1, type=float)
     # parser.add_argument("--path", "-p", required=True)
     args = parser.parse_args()
     graphmix.launcher(worker_main, args, server_init=server_init)

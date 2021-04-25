@@ -17,13 +17,13 @@ from torch_model import torch_sync_data, Net
 
 class PytorchTrain():
     def __init__(self, args):
-        comm = graphmix._C.get_client()
+        comm = graphmix.Client()
         self.meta = comm.meta
         dist.init_process_group(
             backend='nccl',
             init_method='env://',
-            world_size=graphmix._C.num_worker(),
-            rank=graphmix._C.rank()
+            world_size=comm.num_worker(),
+            rank=comm.rank()
         )
         self.device = args.local_rank
         torch.cuda.set_device(self.device)
@@ -38,7 +38,7 @@ class PytorchTrain():
         DDPmodel = nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
         optimizer = torch.optim.Adam(DDPmodel.parameters(), 1e-3)
         num_nodes, num_epoch = 0, 0
-        comm = graphmix._C.get_client()
+        comm = graphmix.Client()
         query = comm.pull_graph()
         start = time.time()
         best_result = 0
@@ -46,7 +46,7 @@ class PytorchTrain():
 
         while True:
             sampler = samplers[random.randrange(len(samplers))]
-            graph = comm.resolve(query)
+            graph = comm.wait(query)
             graph.add_self_loop()
             query = comm.pull_graph(sampler)
             x = torch.Tensor(graph.f_feat).to(device)
@@ -95,6 +95,7 @@ class PytorchTrain():
 def worker_main(args):
     from graphmix.utils import powerset
     driver = PytorchTrain(args)
+    comm = graphmix.Client()
     mapping = {
         "G" : graphmix.sampler.GraphSage,
         "R" : graphmix.sampler.RandomWalk,
@@ -102,7 +103,7 @@ def worker_main(args):
     }
     tests = powerset("GRL")
     train_dict = {}
-    if graphmix._C.rank() == 0:
+    if comm.rank() == 0:
         log_file = open("log.txt", "w")
     for test in tests:
         test = "".join(test)
@@ -112,13 +113,13 @@ def worker_main(args):
             acc, epoch = driver.train_once(samplers)
             accs.append(acc)
             epochs.append(epoch)
-        if graphmix._C.rank() == 0:
+        if comm.rank() == 0:
             printstr = "\t{:.3f}+-{:.5f}\t{:.1f}+-{:.3f}".format(
                 np.mean(accs), np.std(accs), np.mean(epochs), np.std(epochs))
             print(test, printstr)
             print(test, printstr, file=log_file, flush=True)
             train_dict["{}{}".format(test, i)]=driver.eval_acc
-    if graphmix._C.rank() == 0:
+    if comm.rank() == 0:
         with open("train_data.yml", "w") as f:
             f.write(yaml.dump(train_dict))
 

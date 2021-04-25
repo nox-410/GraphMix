@@ -225,7 +225,20 @@ void GraphHandle::initBinding(py::module& m) {
     .def("init_cache", &GraphHandle::initCache)
     .def("get_perf", &GraphHandle::getProfileData)
     .def("is_ready", &GraphHandle::setReady)
-    .def("add_sampler", &GraphHandle::addSampler);
+    .def("add_sampler", &GraphHandle::addSampler)
+    .def_static("barrier", []() {
+      py::gil_scoped_release release;
+      Postoffice::Get()->Barrier(0, kServerGroup);
+    })
+    .def_static("barrier_all", []() {
+      py::gil_scoped_release release;
+      Postoffice::Get()->Barrier(0, kWorkerGroup | kServerGroup);
+    })
+    .def_static("rank", []() { return Postoffice::Get()->my_rank(); })
+    .def_static("num_worker", []() { return Postoffice::Get()->num_workers(); })
+    .def_static("num_server", []() { return Postoffice::Get()->num_servers(); })
+    .def_static("ip", []() { return Postoffice::Get()->van()->my_node().hostname; })
+    .def_static("port", []() { return Postoffice::Get()->van()->my_node().port; });
 }
 
 void GraphHandle::createRemoteHandle(std::unique_ptr<KVApp<GraphHandle>>& app) {

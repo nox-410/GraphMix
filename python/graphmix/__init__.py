@@ -5,8 +5,8 @@ def __handle_import():
     lib_path = os.path.join(cur_path, '../../build/lib/')
     sys.path.append(lib_path)
 __handle_import()
-import libc_graphmix as _C
 from libc_graphmix import cache
 from libc_graphmix import sampler
 from . import dataset
-from .launcher import launcher
+from .launcher import launcher, default_server_port
+from .client import Client

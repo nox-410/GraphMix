@@ -8,11 +8,11 @@ import graphmix
 max_thread = 5
 
 def test(args):
-    rank = graphmix._C.rank()
-    nrank = graphmix._C.num_worker()
-    comm = graphmix._C.get_client()
+    comm = graphmix.Client()
+    rank = comm.rank()
+    nrank = comm.num_worker()
     query = comm.pull_graph()
-    graph = comm.resolve(query)
+    graph = comm.wait(query)
     graph.convert2coo()
     cora_dataset = graphmix.dataset.load_dataset("Cora")
     index = graph.i_feat[:,-1]

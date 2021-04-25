@@ -12,13 +12,13 @@ import torch.distributed as dist
 from torch_model import torch_sync_data, Net
 
 def worker_main(args):
-    comm = graphmix._C.get_client()
+    comm = graphmix.Client()
     meta = comm.meta
     dist.init_process_group(
         backend='nccl',
         init_method='env://',
-        world_size=graphmix._C.num_worker(),
-        rank=graphmix._C.rank()
+        world_size=comm.num_worker(),
+        rank=comm.rank()
     )
     device = args.local_rank
     torch.cuda.set_device(device)
@@ -33,7 +33,7 @@ def worker_main(args):
         count, total, wait_time = 0, 0, 0
         for i in range(batch_num):
             wait_start = time.time()
-            graph = comm.resolve(query)
+            graph = comm.wait(query)
             wait_time += time.time() - wait_start
             graph.add_self_loop()
             query = comm.pull_graph()
@@ -63,7 +63,7 @@ def server_init(server):
     batch_size = args.batch_size
     label_rate = server.meta["train_node"] / server.meta["node"]
     server.init_cache(args.cache_size, graphmix.cache.LFUOpt)
-    worker_per_server = graphmix._C.num_worker() // graphmix._C.num_server()
+    worker_per_server = server.num_worker() // server.num_server()
     #server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size, thread=4 * worker_per_server)
     server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=2, thread=4 * worker_per_server)
     #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2, thread=4 * worker_per_server)

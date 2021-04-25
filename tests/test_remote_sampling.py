@@ -7,9 +7,9 @@ import graphmix
 
 def test(args):
     cora_dataset = graphmix.dataset.load_dataset("Cora")
-    rank = graphmix._C.rank()
-    nrank = graphmix._C.num_worker()
-    comm = graphmix._C.get_client()
+    comm = graphmix.Client()
+    rank = comm.rank()
+    nrank = comm.num_worker()
 
     def check(graph):
         for f, i in zip(graph.f_feat, graph.i_feat):
@@ -21,25 +21,25 @@ def test(args):
             assert (index[u], index[v]) in all_edge
     for i in range(100):
         query = comm.pull_graph()
-        graph = comm.resolve(query)
+        graph = comm.wait(query)
         graph.convert2coo()
         index = graph.i_feat[:,-1]
         if i % 10 == 0:
             check(graph)
     print("CHECK OK")
-    graphmix._C.barrier_all()
+    comm.barrier_all()
 
 def server_init(server):
-    if graphmix._C.rank() == 0:
+    if server.rank() == 0:
         server.init_cache(0.3, graphmix.cache.LFUOpt)
-    elif graphmix._C.rank() == 1:
+    elif server.rank() == 1:
         server.init_cache(0.3, graphmix.cache.LFU)
-    elif graphmix._C.rank() == 2:
+    elif server.rank() == 2:
         server.init_cache(0.3, graphmix.cache.LRU)
     server.add_sampler(graphmix.sampler.GlobalNode, batch_size=512)
     server.is_ready()
-    graphmix._C.barrier_all()
-    print(graphmix._C.rank(), server.get_perf())
+    server.barrier_all()
+    print(server.rank(), server.get_perf())
 
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()

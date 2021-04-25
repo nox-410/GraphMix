@@ -7,14 +7,14 @@ import graphmix
 max_thread = 1
 
 def test(args):
-    rank = graphmix._C.rank()
-    nrank = graphmix._C.num_worker()
-    comm = graphmix._C.get_client()
+    comm = graphmix.Client()
+    rank = comm.rank()
+    nrank = comm.num_worker()
     item_count = 0
     def pull_graph():
         while True:
             query = comm.pull_graph()
-            graph = comm.resolve(query)
+            graph = comm.wait(query)
             nonlocal item_count
             item_count += graph.num_nodes
 

@@ -5,14 +5,13 @@ import graphmix
 
 
 def test(args):
-    rank = graphmix._C.rank()
-    nrank = graphmix._C.num_worker()
-    comm = graphmix._C.get_client()
-    pack = graphmix._C.NodePack()
+    comm = graphmix.Client()
+    rank = comm.rank()
+    nrank = comm.num_worker()
     dataset = graphmix.dataset.load_dataset("Cora")
     num_nodes = dataset.graph.num_nodes
-    task = comm.pull(np.arange(num_nodes), pack)
-    comm.wait(task)
+    query = comm.pull_node(np.arange(num_nodes))
+    pack = comm.wait(query)
     assert len(pack) == num_nodes
     reindex = {}
     for i, node in pack.items() :

@@ -8,18 +8,17 @@ import graphmix
 max_thread = 5
 
 def test(args):
-    rank = graphmix._C.rank()
-    nrank = graphmix._C.num_worker()
+    comm = graphmix.Client()
+    rank = comm.rank()
+    nrank = comm.num_worker()
     if rank != 0:
         return
-    comm = graphmix._C.get_client()
     t = ThreadPoolExecutor(max_workers=max_thread)
     item_count = 0
     def pull_data():
         while True:
             indices = np.random.randint(0, comm.meta["node"], 1000)
-            pack = graphmix._C.NodePack()
-            query = comm.pull(indices, pack)
+            query = comm.pull_node(indices)
             comm.wait(query)
             nonlocal item_count
             item_count += len(indices)

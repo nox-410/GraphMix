@@ -13,11 +13,11 @@ Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv
     : app_id_(app_id), customer_id_(customer_id), recv_handle_(recv_handle) {
   cur_timestamp = 0;
   stand_alone_ = stand_alone;
-  int num_threads = GetEnv("PS_WORKER_THREAD", 1);
+  int num_threads = GetEnv("GRAPHMIX_WORKER_RECV_THREAD", 1);
   if (!stand_alone_) {
     Postoffice::Get()->AddCustomer(this);
     if (Postoffice::Get()->is_server()) {
-      num_threads = GetEnv("PS_SERVER_THREAD", 10);
+      num_threads = GetEnv("GRAPHMIX_SERVER_RECV_THREAD", 10);
     }
   }
   for(int i = 0; i < num_threads; i++) {

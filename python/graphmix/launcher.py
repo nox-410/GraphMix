@@ -7,29 +7,27 @@ import multiprocessing
 from .shard import Shard
 
 envvar = [
-"PS_VERBOSE",
-"PS_WORKER_THREAD",
-"PS_SERVER_THREAD",
-"ZMQ_WORKER_THREAD",
-"ZMQ_SERVER_THREAD",
+"GRAPHMIX_VERBOSE",
+"GRAPHMIX_WORKER_RECV_THREAD",
+"GRAPHMIX_SERVER_RECV_THREAD",
+"GRAPHMIX_WORKER_ZMQ_THREAD",
+"GRAPHMIX_SERVER_ZMQ_THREAD",
 "GRAPHMIX_SERVER_PORT",
-"DMLC_PS_VAN_TYPE",
-"DMLC_NUM_WORKER",
-"DMLC_NUM_SERVER",
-"DMLC_ROLE",
-"DMLC_PS_ROOT_URI",
-"DMLC_PS_ROOT_PORT",
-"DMLC_NODE_HOST",
-"DMLC_INTERFACE",
-"DMLC_LOCAL",
-"DMLC_USE_KUBERNETES",
-"DMLC_PS_WATER_MARK",
+"GRAPHMIX_PS_VAN_TYPE",
+"GRAPHMIX_NUM_WORKER",
+"GRAPHMIX_NUM_SERVER",
+"GRAPHMIX_ROLE",
+"GRAPHMIX_ROOT_URI",
+"GRAPHMIX_ROOT_PORT",
+"GRAPHMIX_NODE_HOST",
+"GRAPHMIX_INTERFACE",
+"GRAPHMIX_LOCAL",
 ]
 
 default_server_port = 27777
 
 def start_server(graph_data_path, server_init):
-    os.environ['DMLC_ROLE'] = "server"
+    os.environ['GRAPHMIX_ROLE'] = "server"
     _C.init()
     rank = _C.rank()
     server = Shard(graph_data_path, rank).create_server()
@@ -37,12 +35,12 @@ def start_server(graph_data_path, server_init):
     _C.finalize()
 
 def start_scheduler():
-    os.environ['DMLC_ROLE'] = "scheduler"
+    os.environ['GRAPHMIX_ROLE'] = "scheduler"
     _C.init()
     _C.finalize()
 
 def start_worker(func, args, graph_data_path):
-    os.environ['DMLC_ROLE'] = "worker"
+    os.environ['GRAPHMIX_ROLE'] = "worker"
     _C.init()
     args.local_rank = _C.rank() % args.num_local_worker
     func(args)

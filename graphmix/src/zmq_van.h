@@ -44,9 +44,9 @@ class ZMQVan : public Van {
     }
     int zmq_threads = 1;
     if (Postoffice::Get()->is_worker())
-      zmq_threads = GetEnv("ZMQ_WORKER_THREAD", 1);
+      zmq_threads = GetEnv("GRAPHMIX_WORKER_ZMQ_THREAD", 1);
     else if (Postoffice::Get()->is_server())
-      zmq_threads = GetEnv("ZMQ_SERVER_THREAD", 8);
+      zmq_threads = GetEnv("GRAPHMIX_SERVER_ZMQ_THREAD", 8);
     zmq_ctx_set(context_, ZMQ_IO_THREADS, zmq_threads);
     start_mu_.unlock();
     Van::Start(customer_id);
@@ -74,12 +74,8 @@ class ZMQVan : public Van {
     receiver_ = zmq_socket(context_, ZMQ_ROUTER);
     CHECK(receiver_ != NULL)
         << "create receiver socket failed: " << zmq_strerror(errno);
-    int local = GetEnv("DMLC_LOCAL", 0);
+    int local = GetEnv("GRAPHMIX_LOCAL", 0);
     std::string hostname = node.hostname.empty() ? "*" : node.hostname;
-    int use_kubernetes = GetEnv("DMLC_USE_KUBERNETES", 0);
-    if (use_kubernetes > 0 && node.role == Node::SCHEDULER) {
-      hostname = "0.0.0.0";
-    }
     hostname = "0.0.0.0";
     std::string addr = local ? "ipc:///tmp/" : "tcp://" + hostname + ":";
     int port = node.port;
@@ -159,15 +155,10 @@ class ZMQVan : public Van {
     if (my_node_.id != Node::kEmpty) {
       std::string my_id = "ps" + std::to_string(my_node_.id);
       zmq_setsockopt(sender, ZMQ_IDENTITY, my_id.data(), my_id.size());
-      const char* watermark = Environment::Get()->find("DMLC_PS_WATER_MARK");
-      if (watermark) {
-        const int hwm = atoi(watermark);
-        zmq_setsockopt(sender, ZMQ_SNDHWM, &hwm, sizeof(hwm));
-      }
     }
     // connect
     std::string addr = "tcp://" + node.hostname + ":" + std::to_string(node.port);
-    if (GetEnv("DMLC_LOCAL", 0)) {
+    if (GetEnv("GRAPHMIX_LOCAL", 0)) {
       addr = "ipc:///tmp/" + std::to_string(node.port);
     }
     if (zmq_connect(sender, addr.c_str()) != 0) {

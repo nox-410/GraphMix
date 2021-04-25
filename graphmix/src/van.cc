@@ -264,9 +264,9 @@ void Van::Start(int customer_id) {
 
   if (init_stage == 0) {
     scheduler_.hostname = std::string(
-        CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_ROOT_URI")));
+        CHECK_NOTNULL(Environment::Get()->find("GRAPHMIX_ROOT_URI")));
     scheduler_.port =
-        atoi(CHECK_NOTNULL(Environment::Get()->find("DMLC_PS_ROOT_PORT")));
+        atoi(CHECK_NOTNULL(Environment::Get()->find("GRAPHMIX_ROOT_PORT")));
     scheduler_.role = Node::SCHEDULER;
     scheduler_.id = kScheduler;
     is_scheduler_ = Postoffice::Get()->is_scheduler();
@@ -276,11 +276,11 @@ void Van::Start(int customer_id) {
       my_node_ = scheduler_;
     } else {
       auto role = Postoffice::Get()->is_worker() ? Node::WORKER : Node::SERVER;
-      const char* nhost = Environment::Get()->find("DMLC_NODE_HOST");
+      const char* nhost = Environment::Get()->find("GRAPHMIX_NODE_HOST");
       std::string ip;
       if (nhost) ip = std::string(nhost);
       if (ip.empty()) {
-        const char* itf = Environment::Get()->find("DMLC_INTERFACE");
+        const char* itf = Environment::Get()->find("GRAPHMIX_INTERFACE");
         std::string interface;
         if (itf) interface = std::string(itf);
         if (interface.size()) {

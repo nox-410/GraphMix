@@ -22,7 +22,7 @@ Client::Client(int target, std::shared_ptr<ps::Customer> customer) {
   context_ = zmq_ctx_new();
   CHECK(context_ != NULL) << "create 0mq context failed";
   zmq_ctx_set(context_, ZMQ_MAX_SOCKETS, 65536);
-  int zmq_threads = ps::GetEnv("ZMQ_WORKER_THREAD", 1);
+  int zmq_threads = ps::GetEnv("GRAPHMIX_WORKER_ZMQ_THREAD", 1);
   zmq_ctx_set(context_, ZMQ_IO_THREADS, zmq_threads);
   recv_port_ = this->bind();
   std::cout << "Client bind to " << recv_port_ << std::endl;

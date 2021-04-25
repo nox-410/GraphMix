@@ -45,5 +45,5 @@ if __name__ =='__main__':
     parser.add_argument("--config", default="../config/test_config.yml")
     args = parser.parse_args()
     import os
-    os.environ["PS_WORKER_THREAD"]=str(max_thread)
+    os.environ["GRAPHMIX_WORKER_RECV_THREAD"]=str(max_thread)
     graphmix.launcher(test, args, server_init=server_init)

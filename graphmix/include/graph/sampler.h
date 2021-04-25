@@ -98,7 +98,7 @@ private:
 
 class GraphSageSampler : public BaseSampler {
 public:
-  GraphSageSampler(GraphHandle *handle, size_t batch_size, size_t depth, size_t width, size_t train_mask_index=1)
+  GraphSageSampler(GraphHandle *handle, size_t batch_size, size_t depth, size_t width, size_t train_mask_index)
    : BaseSampler(handle), batch_size_(batch_size), depth_(depth), width_(width)
    { try_build_index(train_mask_index); }
   void sample_once(sampleState);

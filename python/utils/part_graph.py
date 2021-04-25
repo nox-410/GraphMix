@@ -18,12 +18,12 @@ def part_graph(dataset_name, nparts, output_path):
     float_feature = dataset.x.astype(np.float32)
 
     # process labels and train_mask
-    y_feat = dataset.y
-    if len(y_feat.shape) == 1:
-        y_feat = y_feat.reshape(-1, 1)
-    int_feature = np.concatenate([y_feat, dataset.train_mask.reshape(-1, 1)], axis=1).astype(np.int32)
+    int_feature = dataset.y
+    if len(int_feature.shape) == 1:
+        int_feature = int_feature.reshape(-1, 1)
     if args.nodeid:
         int_feature = np.concatenate([int_feature, np.arange(dataset.graph.num_nodes).reshape(-1, 1)], axis=1)
+    int_feature = np.concatenate([int_feature, dataset.train_mask.reshape(-1, 1)], axis=1).astype(np.int32)
 
     for i in range(nparts):
         part_dict = partition[i]

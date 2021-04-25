@@ -15,9 +15,9 @@ def test(args):
     graph = comm.wait(query)
     graph.convert2coo()
     cora_dataset = graphmix.dataset.load_dataset("Cora")
-    index = graph.i_feat[:,-1]
+    index = graph.i_feat[:,-2]
     for f, i in zip(graph.f_feat, graph.i_feat):
-        idx = i[-1]
+        idx = i[-2]
         assert np.all(f==cora_dataset.x[idx])
         assert i[0] == cora_dataset.y[idx]
     all_edge = np.array(cora_dataset.graph.edge_index).T

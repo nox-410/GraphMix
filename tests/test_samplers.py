@@ -16,7 +16,7 @@ def test(args):
         if graph.tag == graphmix.sampler.GraphSage:
             assert np.all(graph.extra[:,0] <= graph.i_feat[:,1])
         for f, i in zip(graph.f_feat, graph.i_feat):
-            idx = i[-1]
+            idx = i[-2]
             assert np.all(f==cora_dataset.x[idx])
             assert i[0] == cora_dataset.y[idx]
         all_edge = np.array(cora_dataset.graph.edge_index).T

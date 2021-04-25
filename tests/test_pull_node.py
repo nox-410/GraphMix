@@ -15,7 +15,7 @@ def test(args):
     assert len(pack) == num_nodes
     reindex = {}
     for i, node in pack.items() :
-        idx = node.i[-1]
+        idx = node.i[-2]
         reindex[idx] = i
         assert np.all(dataset.x[idx] == node.f)
         assert dataset.y[idx] == node.i[0]

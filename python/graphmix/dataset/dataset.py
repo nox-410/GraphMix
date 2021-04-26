@@ -93,7 +93,7 @@ class RedditDataset():
         adj = sp.load_npz(npz_graph_file)
         edge_index = np.stack([adj.row, adj.col])
         self.num_classes = int(self.y.max() + 1)
-        self.train_mask = np.zeros(num_nodes, dtype=np.int32)
+        self.train_mask = np.zeros(len(self.y), dtype=np.int32)
         self.train_mask[split == 1] = 1
         self.train_mask[split == 3] = 2
         self.graph = _C.Graph(

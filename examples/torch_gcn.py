@@ -22,7 +22,7 @@ def worker_main(args):
     )
     device = args.local_rank
     torch.cuda.set_device(device)
-    model = Net(meta["float_feature"], meta["class"], 128).cuda(device)
+    model = Net(meta["float_feature"], meta["class"], args.hidden).cuda(device)
     DDPmodel = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
     optimizer = torch.optim.Adam(DDPmodel.parameters(), 1e-3)
 
@@ -72,9 +72,11 @@ def server_init(server):
 if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
-    parser.add_argument("--batch_size", default=4000, type=int)
+    parser.add_argument("--batch_size", default=1000, type=int)
     parser.add_argument("--num_epoch", default=100, type=int)
+    parser.add_argument("--hidden", default=256, type=int)
     parser.add_argument("--cache_size", default=0.1, type=float)
+    parser.add_argument("--lr", default=1e-3, type=float)
     # parser.add_argument("--path", "-p", required=True)
     args = parser.parse_args()
     graphmix.launcher(worker_main, args, server_init=server_init)

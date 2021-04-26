@@ -54,6 +54,15 @@ class Net(torch.nn.Module):
             total = int(mask.sum())
             return true_pos / total
 
+    def evaluate(self, x, label, mask, graph):
+        self.eval()
+        with torch.no_grad():
+            out = self.forward(x, graph)
+            eval_acc = self.metrics(out, label, mask==0)
+            test_acc = self.metrics(out, label, mask==2)
+        self.train()
+        return eval_acc, test_acc
+
 def torch_sync_data(*args):
     # all-reduce train stats
     t = torch.tensor(args, dtype=torch.float64, device='cuda')

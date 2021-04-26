@@ -53,13 +53,13 @@ class PlanetoidDataset():
             edge_index=process_graph(graph),
             num_nodes=len(self.y)
         )
-        self.train_mask = np.zeros(len(self.y), dtype=np.long)
+        self.train_mask = np.zeros(len(self.y), dtype=np.int32)
         self.train_mask[0:len(y)] = 1 # train
         if not public_split:
             eval_index = np.arange(len(y), len(y) + 500)
             self.train_mask[:] = 1
             self.train_mask[eval_index] = 0
-            self.train_mask[sorted_test_index] = 0
+            self.train_mask[sorted_test_index] = 2
         self.num_classes = y.shape[1]
 
 # class RedditDataset():
@@ -75,7 +75,6 @@ class PlanetoidDataset():
 #         self.y = data.y.numpy()
 #         self.train_mask = data.train_mask.numpy()
 #         self.num_classes = dataset.num_classes
-
 
 class RedditDataset():
     def __init__(self, root):
@@ -93,8 +92,10 @@ class RedditDataset():
         split = data['node_types']
         adj = sp.load_npz(npz_graph_file)
         edge_index = np.stack([adj.row, adj.col])
-        self.train_mask = split == 1
         self.num_classes = int(self.y.max() + 1)
+        self.train_mask = np.zeros(num_nodes, dtype=np.int32)
+        self.train_mask[split == 1] = 1
+        self.train_mask[split == 3] = 2
         self.graph = _C.Graph(
             edge_index=edge_index,
             num_nodes=len(self.y)
@@ -116,16 +117,28 @@ class OGBDataset():
 
         self.x = data[0]["node_feat"]
         self.y = data[1].squeeze()
-        self.train_mask = np.zeros(num_nodes, np.bool)
-        self.train_mask[train_idx] = True
+        self.train_mask = np.zeros(num_nodes, np.int32)
+        self.train_mask[train_idx] = 1
+        self.train_mask[test_idx] = 2
         self.num_classes = dataset.num_classes
 
-class YelpDataset():
-    def __init__(self, root):
-        adj_full_id = '1Juwx8HtDwSzmVIJ31ooVa1WljI4U5JnA'
-        feats_id = '1Zy6BZH_zLEjKlEFSduKE5tV9qqA_8VtM'
-        class_map_id = '1VUcBGr0T0-klqerjAjxRmAqFuld_SMWU'
-        role_id = '1NI5pa5Chpd-52eSmLW60OnB3WS5ikxq_'
+class GraphSaintDataset():
+    def __init__(self, root, name):
+        if name=="Yelp":
+            adj_full_id = '1Juwx8HtDwSzmVIJ31ooVa1WljI4U5JnA'
+            feats_id = '1Zy6BZH_zLEjKlEFSduKE5tV9qqA_8VtM'
+            class_map_id = '1VUcBGr0T0-klqerjAjxRmAqFuld_SMWU'
+            role_id = '1NI5pa5Chpd-52eSmLW60OnB3WS5ikxq_'
+        elif name=="Flickr":
+            adj_full_id = '1crmsTbd1-2sEXsGwa2IKnIB7Zd3TmUsy'
+            feats_id = '1join-XdvX3anJU_MLVtick7MgeAQiWIZ'
+            class_map_id = '1uxIkbtg5drHTsKt-PAsZZ4_yJmgFmle9'
+            role_id = '1htXCtuktuCW8TR8KiKfrFDAxUgekQoV7'
+        elif name=="Reddit2":
+            adj_full_id = '1sncK996BM5lpuDf75lDFqCiDZyErc1c2'
+            feats_id = '1ZsHaJ0ussP1W722krmEIp_8pwKAoi5b3'
+            class_map_id = '1JF3Pjv9OboMNYs2aXRQGbJbc4t_nDd5u'
+            role_id = '1nJIKd77lcAGU4j-kVNx_AIGEkveIKz3A'
 
         from google_drive_downloader import GoogleDriveDownloader as gdd
 
@@ -143,9 +156,10 @@ class YelpDataset():
             class_arr = np.load(preprocess_class_map)
         else:
             class_map = json.load(open(os.path.join(root, 'class_map.json')))
-            class_arr = np.empty(shape=[len(class_map), 100], dtype=np.int32)
+            class_arr = [-1] * len(class_map)
             for i in range(len(class_map)):
                 class_arr[i] = class_map[str(i)]
+            class_arr = np.array(class_arr, dtype=np.int32)
             np.save(preprocess_class_map, class_arr)
         num_nodes = class_arr.shape[0]
         role_map = json.load(open(os.path.join(root, 'role.json')))
@@ -156,11 +170,15 @@ class YelpDataset():
             edge_index=np.vstack([adj.row, adj.col]),
             num_nodes=num_nodes
         )
-        self.train_mask = np.zeros(num_nodes, dtype=np.bool)
-        self.train_mask[role_map['tr']] = True
+        self.train_mask = np.zeros(num_nodes, dtype=np.int32)
+        self.train_mask[role_map['tr']] = 1
+        self.train_mask[role_map['te']] = 2
         self.x = np.load(os.path.join(root, 'feats.npy'))
         self.y = class_arr
-        self.num_classes = class_arr.shape[1]
+        if len(class_arr.shape) == 2:
+            self.num_classes = class_arr.shape[1]
+        else:
+            self.num_classes = int(class_arr.max() + 1)
 
 def get_dataset_path(dataset_name):
     if "HOME" not in os.environ.keys():
@@ -181,8 +199,8 @@ def load_dataset(name):
         dataset = PlanetoidDataset(root, name)
     elif name=="Reddit":
         dataset = RedditDataset(root)
-    elif name=="Yelp":
-        dataset = YelpDataset(root)
+    elif name=="Yelp" or name=="Flickr" or name=="Reddit2":
+        dataset = GraphSaintDataset(root, name)
     elif name=="ogbn-products" or name=="ogbn-papers100M" or name=='ogbn-arxiv':
         dataset = OGBDataset(root, name)
     else:

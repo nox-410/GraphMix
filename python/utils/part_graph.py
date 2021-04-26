@@ -54,7 +54,9 @@ def part_graph(dataset_name, nparts, output_path):
         "num_part": nparts,
         "partition": part_meta,
         "random" : args.random,
-        "train_node" : int(dataset.train_mask.sum())
+        "train_node" : int((dataset.train_mask==1).sum()),
+        "eval_node" : int((dataset.train_mask==0).sum()),
+        "test_node" : int((dataset.train_mask==2).sum()),
     }
     edge_path = os.path.join(output_path, "meta.yml")
     with open(edge_path, 'w') as f:

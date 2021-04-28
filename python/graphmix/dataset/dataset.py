@@ -141,6 +141,7 @@ class GraphSaintDataset():
             role_id = '1nJIKd77lcAGU4j-kVNx_AIGEkveIKz3A'
 
         from google_drive_downloader import GoogleDriveDownloader as gdd
+        from sklearn.preprocessing import StandardScaler
 
         path = os.path.join(root, 'adj_full.npz')
         gdd.download_file_from_google_drive(adj_full_id, path)
@@ -173,8 +174,12 @@ class GraphSaintDataset():
         self.train_mask = np.zeros(num_nodes, dtype=np.int32)
         self.train_mask[role_map['tr']] = 1
         self.train_mask[role_map['te']] = 2
-        self.x = np.load(os.path.join(root, 'feats.npy'))
         self.y = class_arr
+        # follow graphsaint data preprocessing
+        feats = np.load(os.path.join(root, 'feats.npy'))
+        scaler = StandardScaler()
+        scaler.fit(feats[role_map['tr']])
+        self.x = scaler.transform(feats)
         if len(class_arr.shape) == 2:
             self.num_classes = class_arr.shape[1]
         else:

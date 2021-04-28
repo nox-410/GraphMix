@@ -227,9 +227,8 @@ void Van::ProcessDataMsg(Message* msg) {
   int app_id = msg->meta.app_id;
   int customer_id =
       Postoffice::Get()->is_worker() ? msg->meta.customer_id : app_id;
-  auto* obj = Postoffice::Get()->GetCustomer(app_id, customer_id, 5);
-  CHECK(obj) << "timeout (5 sec) to wait App " << app_id << " customer "
-             << customer_id << " ready at " << my_node_.role;
+  auto* obj = Postoffice::Get()->GetCustomer(app_id, customer_id, 0);
+  CHECK(obj) << "Customer not initilized " << customer_id << " ready at " << my_node_.role;
   obj->Accept(*msg);
 }
 

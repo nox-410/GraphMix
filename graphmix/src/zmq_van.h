@@ -126,7 +126,8 @@ class ZMQVan : public Van {
       connectBack(msg.meta.sender);
       Message rmsg;
       rmsg.meta.recver = msg.meta.sender;
-      if (IsReady()) {
+      // Accept worker when server is initialized
+      if (IsReady() && Postoffice::Get()->GetCustomer(0, 0) != nullptr) {
         rmsg.meta.control.cmd = Control::ARRIVE;
         PS_VLOG(0) << "Server " << Postoffice::Get()->my_rank() << " Worker Arrive from port " << msg.meta.sender;
       }

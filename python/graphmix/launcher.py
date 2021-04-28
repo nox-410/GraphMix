@@ -31,6 +31,7 @@ def start_server(graph_data_path, server_init):
     _C.init()
     rank = _C.rank()
     server = Shard(graph_data_path, rank).create_server()
+    _C.barrier_all()
     server_init(server)
     _C.finalize()
 
@@ -43,6 +44,7 @@ def start_worker(func, args, graph_data_path):
     os.environ['GRAPHMIX_ROLE'] = "worker"
     _C.init()
     args.local_rank = _C.rank() % args.num_local_worker
+    _C.barrier_all()
     func(args)
     _C.finalize()
 

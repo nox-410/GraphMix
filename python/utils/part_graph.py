@@ -1,15 +1,31 @@
+import graphmix
+
 import argparse
 import sys, os
 import numpy as np
+import scipy.sparse as sp
 import time
 import yaml
 
-from graphmix.dataset import load_dataset
+def to_inductive(dataset):
+    indices = np.where(dataset.train_mask == 1)[0]
+    dataset.x = dataset.x[indices]
+    dataset.y = dataset.y[indices]
+    dataset.train_mask = dataset.train_mask[indices]
+    adj_mat = sp.coo_matrix(
+        (np.ones(dataset.graph.num_edges) ,dataset.graph.edge_index),
+        shape=(dataset.graph.num_nodes, dataset.graph.num_nodes)
+    ).tocsr()
+    adj_mat = adj_mat.T[indices].T[indices].tocoo()
+    dataset.graph = graphmix.Graph(np.vstack([adj_mat.row, adj_mat.col]), len(indices))
+    return dataset
 
 def part_graph(dataset_name, nparts, output_path):
     os.makedirs(os.path.expanduser(os.path.normpath(output_path)))
     start = time.time()
-    dataset = load_dataset(dataset_name)
+    dataset = graphmix.dataset.load_dataset(dataset_name)
+    if args.inductive:
+        dataset = to_inductive(dataset)
     print("step1: load_dataset complete, time cost {:.3f}s".format(time.time()-start))
     start = time.time()
     partition = dataset.graph.part_graph(nparts, random=args.random)
@@ -69,6 +85,7 @@ if __name__ =='__main__':
     parser.add_argument("--path", "-p", required=True)
     parser.add_argument("--nodeid", action="store_true")
     parser.add_argument("--random", action="store_true")
+    parser.add_argument("--inductive", action="store_true")
     args = parser.parse_args()
     output_path = str(args.path)
     nparts = int(args.nparts)

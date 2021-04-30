@@ -7,11 +7,10 @@ class GCN(torch.nn.Module):
         self.l = torch.nn.Linear(in_features, out_features, bias=True)
         torch.nn.init.xavier_uniform_(self.l.weight)
         self.activation = activation
-        self.dropout = dropout
+        self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self, x, edge_norm):
-        if self.dropout > 0:
-            x = F.dropout(x, self.dropout)
+        x = self.dropout(x)
         x = self.l(x)
         x = torch.sparse.mm(edge_norm, x)
         if self.activation == "relu":
@@ -28,13 +27,10 @@ class SageConv(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.linear.weight)
         torch.nn.init.xavier_uniform_(self.linear_local.weight)
         self.activation = activation
-        self.dropout = dropout
+        self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self, x, edge_norm):
-        if self.dropout > 0:
-            feat = F.dropout(x, self.dropout)
-        else:
-            feat = x
+        feat = self.dropout(x)
         feat_trans_local = self.linear_local(feat)
         feat_trans_neigh = self.linear(torch.sparse.mm(edge_norm, feat))
         x = torch.cat([feat_trans_local, feat_trans_neigh], dim=1)

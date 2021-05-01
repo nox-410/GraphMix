@@ -2,6 +2,7 @@
 
 #include "PSFunc.h"
 #include "graph/graph_type.h"
+#include "graph/sampler.h"
 
 namespace ps {
 
@@ -19,15 +20,16 @@ template<> struct PSFData<NodePull> {
 
 template<> struct PSFData<GraphPull> {
   using Request = tuple<
-    SArray<int> // desired sampler
+    SArray<SamplerTag> // desired sampler
   >;
   using Response = tuple<
     SArray<graph_float>, // float feature
     SArray<graph_int>, // int feature
     SArray<node_id>, // csr-format graph
     SArray<node_id>, // csr-foramt graph
-    int, // tag
-    SArray<graph_int> // extra data
+    SArray<graph_int>, // extra data
+    SamplerTag, //sampler tag
+    int // sampler type
   >;
 };
 

@@ -23,7 +23,7 @@ def test(args):
         query = comm.pull_graph()
         graph = comm.wait(query)
         graph.convert2coo()
-        index = graph.i_feat[:,-1]
+        index = graph.i_feat[:,-2]
         if i % 10 == 0:
             check(graph)
     print("CHECK OK")

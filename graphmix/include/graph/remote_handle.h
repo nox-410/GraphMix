@@ -15,8 +15,9 @@ class RemoteHandle {
 public:
   RemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &, GraphHandle*);
   void initCache(size_t, cache::policy);
+  void initQueue(SamplerTag tag);
   void queryRemote(sampleState state);
-  sampleState getSampleState(SamplerType type);
+  sampleState getSampleState(SamplerType type, SamplerTag tag);
 
   // Profile data
   size_t total_cnt_ = 0, cache_miss_cnt_ = 0, nonlocal_cnt_ = 0;
@@ -27,10 +28,10 @@ private:
   void filterNode(sampleState &state);
   std::unique_ptr<cache::Cache<node_id, NodeData>> cache_;
   std::mutex cache_mtx_;
-  std::unordered_map<SamplerType, std::unique_ptr<ThreadsafeQueue<sampleState>>> recv_queue_;
+  std::unordered_map<SamplerTag, std::unique_ptr<ThreadsafeQueue<sampleState>>> recv_queue_;
   std::shared_ptr<KVApp<GraphHandle>> kvapp_;
   std::shared_ptr<GraphHandle> handle_;
-  std::atomic<int> on_flight_[static_cast<int>(SamplerType::kNumSamplerType)];
+  std::unordered_map<SamplerTag, std::atomic<int>> on_flight_;
 };
 
 } // namespace ps

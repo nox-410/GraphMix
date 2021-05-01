@@ -21,6 +21,7 @@ public:
   std::unordered_set<node_id> query_nodes;
   NodePack recvNodes;
   SamplerType type;
+  SamplerTag tag;
 };
 
 class _randomWalkState : public _sampleState {
@@ -45,12 +46,13 @@ class GraphHandle;
 
 class BaseSampler {
 public:
-  BaseSampler(GraphHandle *handle);
+  BaseSampler(GraphHandle *handle, SamplerTag tag);
   void sample_start();
   void join() { thread_.join(); }
   void kill() { killed_ = true; }
   virtual ~BaseSampler() = default;
   virtual SamplerType type() = 0;
+  SamplerTag tag() { return tag_; }
 protected:
   std::shared_ptr<GraphHandle> handle_;
   GraphMiniBatch construct(const NodePack &node_pack);
@@ -58,14 +60,15 @@ protected:
 private:
   std::thread thread_;
   bool killed_ = false;
+  const SamplerTag tag_;
 };
 
 typedef std::unique_ptr<BaseSampler> SamplerPTR;
 
 class LocalNodeSampler : public BaseSampler {
 public:
-  LocalNodeSampler(GraphHandle *handle, size_t batch_size)
-  : BaseSampler(handle), batch_size_(batch_size) {}
+  LocalNodeSampler(GraphHandle *handle, SamplerTag tag, size_t batch_size)
+  : BaseSampler(handle, tag), batch_size_(batch_size) {}
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kLocalNode; }
 private:
@@ -75,8 +78,8 @@ private:
 
 class GlobalNodeSampler : public BaseSampler {
 public:
-  GlobalNodeSampler(GraphHandle *handle, size_t batch_size)
-  : BaseSampler(handle), batch_size_(batch_size) {}
+  GlobalNodeSampler(GraphHandle *handle, SamplerTag tag, size_t batch_size)
+  : BaseSampler(handle, tag), batch_size_(batch_size) {}
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kGlobalNode; }
 private:
@@ -86,8 +89,8 @@ private:
 
 class RandomWalkSampler : public BaseSampler {
 public:
-  RandomWalkSampler(GraphHandle *handle, size_t rw_head, size_t rw_length)
-   : BaseSampler(handle), rw_head_(rw_head), rw_length_(rw_length) {}
+  RandomWalkSampler(GraphHandle *handle, SamplerTag tag, size_t rw_head, size_t rw_length)
+   : BaseSampler(handle, tag), rw_head_(rw_head), rw_length_(rw_length) {}
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kRandomWalk; }
 private:
@@ -98,8 +101,8 @@ private:
 
 class GraphSageSampler : public BaseSampler {
 public:
-  GraphSageSampler(GraphHandle *handle, size_t batch_size, size_t depth, size_t width, size_t train_mask_index)
-   : BaseSampler(handle), batch_size_(batch_size), depth_(depth), width_(width)
+  GraphSageSampler(GraphHandle *handle, SamplerTag tag, size_t batch_size, size_t depth, size_t width, size_t train_mask_index)
+   : BaseSampler(handle, tag), batch_size_(batch_size), depth_(depth), width_(width)
    { try_build_index(train_mask_index); }
   void sample_once(sampleState);
   SamplerType type() { return SamplerType::kGraphSage; }

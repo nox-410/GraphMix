@@ -21,7 +21,7 @@ public:
   static void initBinding(py::module &m);
   void initMeta(py::dict meta);
   void initData(py::array_t<graph_float> f_feat, py::array_t<graph_int> i_feat, py::array_t<node_id> edges);
-  void push(const GraphMiniBatch &graph, SamplerType type);
+  void push(const GraphMiniBatch &graph, SamplerTag tag);
 
   node_id nNodes() { return num_local_nodes_; }
   node_id offset() { return local_offset_; }
@@ -51,7 +51,7 @@ private:
   node_id local_offset_;
   py::dict dict_meta_;
 // ---------------------- sampler management -----------------------------------
-  std::map<SamplerType, std::unique_ptr<ThreadsafeBoundedQueue<GraphMiniBatch>>> graph_queue_;
+  std::map<SamplerTag, std::unique_ptr<ThreadsafeBoundedQueue<GraphMiniBatch>>> graph_queue_;
   std::vector<SamplerPTR> samplers_;
 // ---------------------- Remote data handle -----------------------------------
   std::unique_ptr<RemoteHandle> remote_;

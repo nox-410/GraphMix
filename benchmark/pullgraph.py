@@ -33,8 +33,7 @@ def test(args):
 
 def server_init(server):
     #server.init_cache(1, graphmix.cache.LFUOpt)
-    for i in range(args.num_local_worker):
-        server.add_sampler(graphmix.sampler.LocalNode, batch_size=500)
+    server.add_sampler(graphmix.sampler.LocalNode, batch_size=500, thread=args.num_local_worker)
     #server.add_sampler(graphmix.sampler.RandomWalk, rw_head=128, rw_length=2)
     server.is_ready()
 

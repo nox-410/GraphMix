@@ -77,10 +77,10 @@ GraphClient::pullData_impl(const node_id* indices, size_t n, NodePack &nodes) {
 
 GraphClient::query_t
 GraphClient::pullGraph(py::args args) {
-  SArray<int> priority;
+  SArray<SamplerTag> priority;
   for (auto item : args) {
-    SamplerType sampler = item.cast<SamplerType>();
-    priority.push_back(static_cast<int>(sampler));
+    ssize_t tag = py::hash(item);
+    priority.push_back(tag);
   }
   py::gil_scoped_release release;
   data_mu.lock();
@@ -93,14 +93,16 @@ GraphClient::pullGraph(py::args args) {
     auto &i_feat = std::get<1>(response);
     auto &csr_i = std::get<2>(response);
     auto &csr_j = std::get<3>(response);
-    int tag = std::get<4>(response);
+    SamplerTag tag = std::get<5>(response);
+    int type = std::get<6>(response);
     size_t num_nodes = f_feat.size() / meta_.f_len;
-    // only for graphsage minibatch, coo-format are used
-    std::string format = tag == static_cast<int>(SamplerType::kGraphSage) ? "coo" : "csr";
+    // coo-format is used only in graphsage minibatch
+    std::string format = type == static_cast<int>(SamplerType::kGraphSage) ? "coo" : "csr";
+    CHECK(tag != kInvalidTag) << "Empty reply, maybe an invalid sampler is used in client side";
     auto graph = std::make_shared<PyGraph>(csr_i, csr_j, num_nodes, format);
     graph->setFeature(f_feat, i_feat);
-    graph->setTag(tag);
-    graph->setExtra(std::get<5>(response));
+    graph->setType(type);
+    graph->setExtra(std::get<4>(response));
     graph_map_[cur_query] = graph;
   };
   auto ts = kvapp_->Request<GraphPull>(request, cb, meta_.rank);

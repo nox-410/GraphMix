@@ -17,15 +17,6 @@ void GraphHandle::waitReady() {
     cv_.wait(lock);
 }
 
-static vector<SamplerType> getDefaultSamplerPriority() {
-  return {
-    SamplerType::kGraphSage,
-    SamplerType::kRandomWalk,
-    SamplerType::kGlobalNode,
-    SamplerType::kLocalNode,
-  };
-}
-
 void GraphHandle::serve(const PSFData<NodePull>::Request& request, PSFData<NodePull>::Response& response) {
   //std::this_thread::sleep_for(std::chrono::milliseconds(100));
   waitReady();
@@ -56,41 +47,40 @@ void GraphHandle::serve(const PSFData<NodePull>::Request& request, PSFData<NodeP
 
 void GraphHandle::serve(const PSFData<GraphPull>::Request& request, PSFData<GraphPull>::Response& response) {
   waitReady();
-  std::vector<SamplerType> valid_sampler, request_sampler;
-  for (auto val : std::get<0>(request))
-    request_sampler.push_back(static_cast<SamplerType>(val));
-  if (request_sampler.empty())
-    request_sampler = getDefaultSamplerPriority();
-  // filter out not exist samplers;
-  for (auto val : request_sampler)
-    if (graph_queue_.count(val)) valid_sampler.push_back(val);
-  if (valid_sampler.empty()) {
+  std::vector<SamplerTag> valid_tag;
+  auto request_tag = std::get<0>(request);
+  // if no sampler specified, use the default priority
+  if (request_tag.empty())
+    for (auto &kvs : graph_queue_) request_tag.push_back(kvs.first);
+  // filter out not exist tags;
+  for (auto val : request_tag)
+    if (graph_queue_.count(val)) valid_tag.push_back(val);
+  if (valid_tag.empty()) {
     // request might not be correct
-    std::get<4>(response) = static_cast<int>(SamplerType::kNumSamplerType);
+    std::get<5>(response) = kInvalidTag;
+    std::get<6>(response) = static_cast<int>(SamplerType::kNumSamplerType);
     return;
   }
 
   GraphMiniBatch result;
   bool success = false;
-  for (auto sampler : valid_sampler) {
-    success = graph_queue_[sampler]->TryPop(&result);
-    if (success) {
-      std::get<4>(response) = static_cast<int>(sampler);
-      break;
-    }
+  for (auto tag : valid_tag) {
+    success = graph_queue_[tag]->TryPop(&result);
+    if (success) break;
   }
 
   // If all samplers are not ready, use the one with lowest priority
   if (!success) {
-    SamplerType final_wait_sampler = valid_sampler.back();
-    graph_queue_[final_wait_sampler]->WaitAndPop(&result);
-    std::get<4>(response) = static_cast<int>(final_wait_sampler);
+    SamplerTag final_wait_tag = valid_tag.back();
+    graph_queue_[final_wait_tag]->WaitAndPop(&result);
   }
   std::get<0>(response) = result.f_feat;
   std::get<1>(response) = result.i_feat;
   std::get<2>(response) = result.csr_i;
   std::get<3>(response) = result.csr_j;
-  std::get<5>(response) = result.extra;
+  std::get<4>(response) = result.extra;
+  std::get<5>(response) = result.tag;
+  std::get<6>(response) = result.type;
 }
 
 void GraphHandle::serve(const PSFData<MetaPull>::Request& request, PSFData<MetaPull>::Response& response) {
@@ -169,41 +159,48 @@ void GraphHandle::stopSampling() {
 }
 
 void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
-  if (!graph_queue_.count(type)) {
-    auto ptr = std::make_unique<ThreadsafeBoundedQueue<GraphMiniBatch>>(kserverBufferSize);
-    graph_queue_.emplace(type, std::move(ptr));
-  }
   SamplerPTR sampler;
+  SamplerTag tag = graph_queue_.size(); // this is the default tag, will be overwritten
   std::unordered_map<std::string, int> kvs;
   for (auto item : kwargs) {
     std::string key = std::string(py::str(item.first));
+    if (key == "tag") {
+      tag = py::hash(item.second);
+      continue;
+    }
     int value = item.second.cast<int>();
     kvs.emplace(key, value);
   }
-
+  if (!graph_queue_.count(tag)) {
+    auto ptr = std::make_unique<ThreadsafeBoundedQueue<GraphMiniBatch>>(kserverBufferSize);
+    graph_queue_.emplace(tag, std::move(ptr));
+    remote_->initQueue(tag);
+  } else {
+    LF << "Sampler tag should not be duplicated.";
+  }
   int thread = kvs.count("thread") ? kvs["thread"] : 1;
   for (int i = 0; i < thread; i++) {
     switch (type)
     {
     case SamplerType::kLocalNode:
       CHECK(kvs.count("batch_size"));
-      sampler = std::make_unique<LocalNodeSampler>(this, kvs["batch_size"]);
+      sampler = std::make_unique<LocalNodeSampler>(this, tag, kvs["batch_size"]);
       break;
     case SamplerType::kGlobalNode:
       CHECK(kvs.count("batch_size"));
-      sampler = std::make_unique<GlobalNodeSampler>(this, kvs["batch_size"]);
+      sampler = std::make_unique<GlobalNodeSampler>(this, tag, kvs["batch_size"]);
       break;
     case SamplerType::kRandomWalk:
       CHECK(kvs.count("rw_head"));
       CHECK(kvs.count("rw_length"));
-      sampler = std::make_unique<RandomWalkSampler>(this, kvs["rw_head"], kvs["rw_length"]);
+      sampler = std::make_unique<RandomWalkSampler>(this, tag, kvs["rw_head"], kvs["rw_length"]);
       break;
     case SamplerType::kGraphSage:
       CHECK(kvs.count("batch_size"));
       CHECK(kvs.count("depth"));
       CHECK(kvs.count("width"));
       if (!kvs.count("index")) kvs["index"] = iLen() - 1;
-      sampler = std::make_unique<GraphSageSampler>(this, kvs["batch_size"], kvs["depth"], kvs["width"], kvs["index"]);
+      sampler = std::make_unique<GraphSageSampler>(this, tag, kvs["batch_size"], kvs["depth"], kvs["width"], kvs["index"]);
       break;
     default:
       LF << "Sampler Not Implemented";
@@ -213,8 +210,8 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
   }
 }
 
-void GraphHandle::push(const GraphMiniBatch& graph, SamplerType type) {
-  graph_queue_[type]->Push(graph);
+void GraphHandle::push(const GraphMiniBatch& graph, SamplerTag tag) {
+  graph_queue_[tag]->Push(graph);
 }
 
 void GraphHandle::initBinding(py::module& m) {

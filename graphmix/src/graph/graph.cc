@@ -303,7 +303,7 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("format", &PyGraph::getFormat)
     .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
     .def_property_readonly("i_feat", &PyGraph::getIntFeat)
-    .def_property_readonly("tag", &PyGraph::getTag)
+    .def_property_readonly("type", &PyGraph::getType)
     .def_property_readonly("extra", &PyGraph::getExtra)
     .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true, py::arg("random")=false)
     .def("partition", &PyGraph::PyPartition)

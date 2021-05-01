@@ -16,13 +16,15 @@ sampleState makeSampleState(SamplerType type) {
   return state;
 }
 
-BaseSampler::BaseSampler(GraphHandle *handle) : handle_(handle->shared_from_this()) {}
+BaseSampler::BaseSampler(GraphHandle *handle, SamplerTag tag)
+  : handle_(handle->shared_from_this()), tag_(tag) {}
 
 void BaseSampler::sample_start() {
   auto func = [this] () {
     while (!killed_) {
-      sampleState state = handle_->getRemote()->getSampleState(type());
+      sampleState state = handle_->getRemote()->getSampleState(type(), tag());
       CHECK(state->type == type());
+      CHECK(state->tag == tag());
       sample_once(std::move(state));
     }
     handle_.reset();
@@ -34,6 +36,8 @@ void BaseSampler::sample_start() {
 // unused edges are removed, used edges are reindexed
 GraphMiniBatch BaseSampler::construct(const NodePack &node_pack) {
   GraphMiniBatch graph;
+  graph.tag = tag();
+  graph.type = static_cast<int>(type());
   size_t n = node_pack.size();
   graph.f_feat.resize(n * handle_->fLen());
   graph.i_feat.resize(n * handle_->iLen());
@@ -61,7 +65,7 @@ void LocalNodeSampler::sample_once(sampleState state) {
   for (node_id node: nodes) {
     node_pack.emplace(node + handle_->offset(), handle_->getNode(node + handle_->offset()));
   }
-  handle_->push(construct(node_pack), type());
+  handle_->push(construct(node_pack), tag());
 }
 
 void GlobalNodeSampler::sample_once(sampleState state) {
@@ -71,7 +75,7 @@ void GlobalNodeSampler::sample_once(sampleState state) {
     for (auto node : nodes) state->query_nodes.emplace(node);
     handle_->getRemote()->queryRemote(std::move(state));
   } else {
-    handle_->push(construct(state->recvNodes), type());
+    handle_->push(construct(state->recvNodes), tag());
   }
 }
 
@@ -79,7 +83,7 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
   auto state = std::static_pointer_cast<_randomWalkState>(state_base);
   if (state->rw_round == rw_length_) {
     // if ready
-    handle_->push(construct(state->recvNodes), type());
+    handle_->push(construct(state->recvNodes), tag());
     return;
   }
   if (state->rw_round == 0) {
@@ -110,6 +114,8 @@ void RandomWalkSampler::sample_once(sampleState state_base) {
 GraphMiniBatch GraphSageSampler::SageConstruct(sampleState state_base) {
   auto state = std::static_pointer_cast<_graphSageState>(state_base);
   GraphMiniBatch graph;
+  graph.tag = tag();
+  graph.type = static_cast<int>(type());
   size_t n = state->recvNodes.size();
   graph.f_feat.resize(n * handle_->fLen());
   graph.i_feat.resize(n * handle_->iLen());
@@ -143,7 +149,7 @@ void GraphSageSampler::sample_once(sampleState state_base) {
         graph.extra.push_back(0);
       }
     }
-    handle_->push(graph, type());
+    handle_->push(graph, tag());
     return;
   }
   if (state->expand_round == 0) {

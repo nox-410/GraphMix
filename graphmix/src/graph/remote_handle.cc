@@ -6,12 +6,6 @@ namespace ps {
 RemoteHandle::RemoteHandle(std::unique_ptr<KVApp<GraphHandle>> &app, GraphHandle* handle) {
   CHECK(app);
   kvapp_ = std::move(app);
-  for (int i = 0; i< static_cast<int>(SamplerType::kNumSamplerType); i++) {
-    SamplerType tp = static_cast<SamplerType>(i);
-    auto ptr = std::make_unique<ThreadsafeQueue<sampleState>>();
-    recv_queue_.emplace(tp, std::move(ptr));
-    on_flight_[i] = 0;
-  }
   handle_ = handle->shared_from_this();
 }
 
@@ -33,6 +27,12 @@ void RemoteHandle::initCache(size_t cache_size, cache::policy cache_policy) {
   }
 }
 
+void RemoteHandle::initQueue(SamplerTag tag) {
+  auto ptr = std::make_unique<ThreadsafeQueue<sampleState>>();
+  recv_queue_.emplace(tag, std::move(ptr));
+  on_flight_[tag] = 0;
+}
+
 void RemoteHandle::defaultCallback(const sampleState &state) {
   CHECK(state);
   // cache insert
@@ -43,10 +43,8 @@ void RemoteHandle::defaultCallback(const sampleState &state) {
       cache_->insert(node, state->recvNodes[node]);
     }
   }
-  // If we are receiving too much, we will discard them.
-  // This is not likely to happen
-  recv_queue_[state->type]->Push(state);
-  on_flight_[static_cast<int>(state->type)]--;
+  recv_queue_[state->tag]->Push(state);
+  on_flight_[state->tag]--;
 }
 
 void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys, const PSFData<NodePull>::Response &response) {
@@ -73,17 +71,18 @@ void RemoteHandle::partialCallback(sampleState state, SArray<node_id> pull_keys,
   if (wait_num == 1) defaultCallback(state);
 }
 
-sampleState RemoteHandle::getSampleState(SamplerType type) {
+sampleState RemoteHandle::getSampleState(SamplerType type, SamplerTag tag) {
   sampleState state;
   bool success = false;
-  success = recv_queue_[type]->TryPop(&state);
+  success = recv_queue_[tag]->TryPop(&state);
   if (success) {
     return state;
-  } else if (on_flight_[static_cast<int>(type)] > handle_->kserverBufferSize) {
-    recv_queue_[type]->WaitAndPop(&state);
+  } else if (on_flight_[tag] > handle_->kserverBufferSize) {
+    recv_queue_[tag]->WaitAndPop(&state);
     return state;
   } else {
     state = makeSampleState(type);
+    state->tag = tag;
     return state;
   }
 }
@@ -91,7 +90,7 @@ sampleState RemoteHandle::getSampleState(SamplerType type) {
 void RemoteHandle::queryRemote(sampleState state) {
   CHECK(state != nullptr);
   CHECK(state->wait_num == 0);
-  on_flight_[static_cast<int>(state->type)]++;
+  on_flight_[state->tag]++;
   filterNode(state);
   int nserver = Postoffice::Get()->num_servers();
   std::vector<SArray<node_id>> keys(nserver);

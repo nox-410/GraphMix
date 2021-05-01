@@ -53,7 +53,7 @@ class PytorchTrain():
             query = comm.pull_graph(sampler)
             x = torch.Tensor(graph.f_feat).to(device)
             y = torch.Tensor(graph.i_feat).to(device, torch.long)
-            if graph.tag == graphmix.sampler.GraphSage:
+            if graph.type == graphmix.sampler.GraphSage:
                 train_mask = torch.Tensor(graph.extra[:, 0]).to(device, torch.long)
             else:
                 train_mask = y[ : , -1] == 1

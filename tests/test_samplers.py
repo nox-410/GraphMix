@@ -13,8 +13,8 @@ def test(args):
     nrank = comm.num_worker()
 
     def check(graph):
-        if graph.tag == graphmix.sampler.GraphSage:
-            assert np.all(graph.extra[:,0] <= graph.i_feat[:,1])
+        if graph.type == graphmix.sampler.GraphSage:
+            assert np.all(graph.extra[:,0] <= graph.i_feat[:,-1])
         for f, i in zip(graph.f_feat, graph.i_feat):
             idx = i[-2]
             assert np.all(f==cora_dataset.x[idx])
@@ -22,8 +22,7 @@ def test(args):
         all_edge = np.array(cora_dataset.graph.edge_index).T
         for u,v in zip(graph.edge_index[0], graph.edge_index[1]):
             assert (index[u], index[v]) in all_edge
-    samplers = [graphmix.sampler.LocalNode, graphmix.sampler.GlobalNode,
-        graphmix.sampler.GraphSage, graphmix.sampler.RandomWalk]
+    samplers = [0,1,2,3]
     for i in range(20):
         random.shuffle(samplers)
         query = comm.pull_graph(*samplers)

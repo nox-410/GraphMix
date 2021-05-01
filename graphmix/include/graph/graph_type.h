@@ -20,7 +20,7 @@ NodeData makeNodeData();
 typedef std::unordered_map<node_id, NodeData> NodePack;
 
 typedef ssize_t SamplerTag;
-const SamplerTag kInvalidTag = -0x10000001;
+const SamplerTag kInvalidTag = -1;
 
 struct GraphMiniBatch {
   SArray<graph_float> f_feat;

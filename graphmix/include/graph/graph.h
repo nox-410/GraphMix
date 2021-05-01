@@ -15,6 +15,7 @@ private:
   SArray<graph_int> i_feat_;
   std::string format_="coo";
   ps::SamplerType type_ = ps::SamplerType::kNumSamplerType;
+  SamplerTag tag_ = kInvalidTag;
   SArray<graph_int> extra_;
 public:
   PyGraph(SArray<node_id> edge_index_u, SArray<node_id> edge_index_v, size_t num_nodes, std::string format="coo");
@@ -30,6 +31,8 @@ public:
   void setFeature(SArray<graph_float>, SArray<graph_int>);
   void setType(int type) { type_ = static_cast<ps::SamplerType>(type); }
   auto getType() { return type_; }
+  void setTag(SamplerTag tag) { tag_ = tag; }
+  auto getTag() { return tag_; }
   void setExtra(SArray<graph_int> extra);
   py::array_t<graph_int> getExtra();
 

@@ -102,6 +102,7 @@ GraphClient::pullGraph(py::args args) {
     auto graph = std::make_shared<PyGraph>(csr_i, csr_j, num_nodes, format);
     graph->setFeature(f_feat, i_feat);
     graph->setType(type);
+    graph->setTag(tag);
     graph->setExtra(std::get<4>(response));
     graph_map_[cur_query] = graph;
   };

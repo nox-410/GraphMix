@@ -3,7 +3,6 @@
 #include "ps/kvapp.h"
 #include "graph/graph.h"
 #include "common/binding.h"
-#include "common/thread_safe_hash_map.h"
 
 using namespace ps;
 
@@ -32,11 +31,11 @@ private:
   std::unordered_map<query_t, std::vector<int>> query2timestamp;
   // data_pull & data_push query, increase 1 each call
   query_t next_query = 0;
-  // protect query2timestamp and next_query
+  // protect query2timestamp, graph_map_ and next_query
   std::mutex data_mu;
   std::unique_ptr<KVApp<EmptyHandler>> kvapp_;
   GraphMetaData meta_;
-  threadsafe_unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
+  std::unordered_map<query_t, std::shared_ptr<PyGraph>> graph_map_;
   bool stand_alone_;
   int getserver(node_id idx);
 };

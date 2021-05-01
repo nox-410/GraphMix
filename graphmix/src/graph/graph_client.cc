@@ -104,7 +104,10 @@ GraphClient::pullGraph(py::args args) {
     graph->setType(type);
     graph->setTag(tag);
     graph->setExtra(std::get<4>(response));
+
+    data_mu.lock();
     graph_map_[cur_query] = graph;
+    data_mu.unlock();
   };
   auto ts = kvapp_->Request<GraphPull>(request, cb, meta_.rank);
   timestamps.push_back(ts);
@@ -134,11 +137,11 @@ void GraphClient::waitData(query_t query) {
 
 std::shared_ptr<PyGraph> GraphClient::resolveGraph(query_t query) {
   waitData(query);
-  if (graph_map_.count(query) == 0) {
-    throw std::runtime_error("Graph for the query is not found.");
-  }
+  data_mu.lock();
+  CHECK(graph_map_.count(query)) << "Graph for query is not found.";
   auto result = graph_map_[query];
   graph_map_.erase(query);
+  data_mu.unlock();
   return result;
 }
 

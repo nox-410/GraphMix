@@ -28,6 +28,7 @@ def worker_main(args):
 
     query = comm.pull_graph()
     batch_num = meta["node"] // (args.batch_size * dist.get_world_size())
+    times = []
     for epoch in range(args.num_epoch):
         epoch_start_time = time.time()
         count, total, wait_time = 0, 0, 0
@@ -54,9 +55,10 @@ def worker_main(args):
             acc = model.metrics(out, label, train_mask)
             count += int(train_mask.sum() * acc)
         epoch_end_time = time.time()
+        times.append(epoch_end_time-epoch_start_time)
         count, total, wait_time = torch_sync_data(count, total, wait_time)
         if args.local_rank == 0:
-            print("epoch {} time {:.3f} acc={:.3f}".format(epoch, epoch_end_time-epoch_start_time, count/total))
+            print("epoch {} time {:.3f} acc={:.3f}".format(epoch, np.array(times).mean(), count/total))
             print("wait time total : {:.3f}sec".format(wait_time / dist.get_world_size()))
 
 def server_init(server):

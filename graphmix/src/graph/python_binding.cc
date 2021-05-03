@@ -49,17 +49,17 @@ PYBIND11_MODULE(libc_graphmix, m) {
   m.def("start_server", StartServer);
 
   py::bind_map<NodePack>(m, "NodePack");
-  py::class_<_NodeData, NodeData>(m, "NodeData")
+  py::class_<_NodeData, NodeData>(m, "NodeData", py::module_local())
     .def_property_readonly("f", [](NodeData &n){ return binding::vec_nocp(n->f_feat); } )
     .def_property_readonly("i", [](NodeData &n){ return binding::vec_nocp(n->i_feat); } )
     .def_property_readonly("e", [](NodeData &n){ return binding::vec_nocp(n->edge); } );
 
-  py::enum_<cache::policy>(m, "cache")
+  py::enum_<cache::policy>(m, "cache", py::module_local())
     .value("LRU", cache::policy::LRU)
     .value("LFU", cache::policy::LFU)
     .value("LFUOpt", cache::policy::LFUOpt);
 
-  py::enum_<SamplerType>(m, "sampler")
+  py::enum_<SamplerType>(m, "sampler", py::module_local())
     .value("LocalNode", SamplerType::kLocalNode)
     .value("GlobalNode", SamplerType::kGlobalNode)
     .value("RandomWalk", SamplerType::kRandomWalk)

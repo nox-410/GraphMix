@@ -169,7 +169,7 @@ std::shared_ptr<GraphClient> createClient(int port) {
 }
 
 void GraphClient::initBinding(py::module& m) {
-  py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client")
+  py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client", py::module_local())
     .def_property_readonly("meta", &GraphClient::getMeta)
     .def("pull_node", &GraphClient::pullData)
     .def("pull_graph", &GraphClient::pullGraph)

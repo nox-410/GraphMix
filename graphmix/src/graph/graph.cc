@@ -295,7 +295,7 @@ py::list PyGraph::part_graph(int nparts, bool balance_edge, bool random) {
 }
 
 void PyGraph::initBinding(py::module &m) {
-  py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph")
+  py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph", py::module_local(), py::module_local())
     .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))
     .def_property_readonly("edge_index", &PyGraph::getEdgeIndex)
     .def_property_readonly("num_nodes", &PyGraph::nNodes)

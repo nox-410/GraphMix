@@ -215,7 +215,7 @@ void GraphHandle::push(const GraphMiniBatch& graph, SamplerTag tag) {
 }
 
 void GraphHandle::initBinding(py::module& m) {
-  py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle")
+  py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "Graph handle", py::module_local())
     .def_property_readonly("meta", &GraphHandle::getMeta)
     .def("init_meta", &GraphHandle::initMeta)
     .def("init_data", &GraphHandle::initData)

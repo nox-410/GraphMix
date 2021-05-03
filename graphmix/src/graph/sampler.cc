@@ -43,8 +43,10 @@ GraphMiniBatch BaseSampler::construct(const NodePack &node_pack) {
   graph.i_feat.resize(n * handle_->iLen());
   graph.csr_i.resize(n + 1);
   std::unordered_map<node_id, node_id> idx_map;
-  for (auto &node : node_pack)
-    idx_map[node.first] = idx_map.size();
+  for (auto &node : node_pack) {
+    int idx = idx_map.size();
+    idx_map[node.first] = idx;
+  }
   for (auto &node : node_pack) {
     node_id idx = idx_map[node.first];
     for (node_id neighbor : node.second->edge) {
@@ -120,8 +122,10 @@ GraphMiniBatch GraphSageSampler::SageConstruct(sampleState state_base) {
   graph.f_feat.resize(n * handle_->fLen());
   graph.i_feat.resize(n * handle_->iLen());
   std::unordered_map<node_id, node_id> idx_map;
-  for (auto &node : state->recvNodes)
-    idx_map[node.first] = idx_map.size();
+  for (auto &node : state->recvNodes) {
+    int idx = idx_map.size();
+    idx_map[node.first] = idx;
+  }
   for (auto &node : state->recvNodes) {
     node_id idx = idx_map[node.first];
     std::copy(node.second->f_feat.begin(), node.second->f_feat.end(), &graph.f_feat[idx * handle_->fLen()]);

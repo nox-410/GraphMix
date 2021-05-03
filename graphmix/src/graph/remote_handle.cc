@@ -37,7 +37,7 @@ void RemoteHandle::defaultCallback(const sampleState &state) {
   CHECK(state);
   // cache insert
   if (cache_) {
-    std::lock_guard lock(cache_mtx_);
+    std::lock_guard<std::mutex> lock(cache_mtx_);
     for (node_id node : state->query_nodes) {
       CHECK(state->recvNodes[node]);
       cache_->insert(node, state->recvNodes[node]);
@@ -121,7 +121,7 @@ void RemoteHandle::filterNode(sampleState &state) {
       state->recvNodes[node] = handle_->getNode(node);
       local_cnt++;
     } else if (cache_)  {
-      std::lock_guard lock(cache_mtx_);
+      std::lock_guard<std::mutex> lock(cache_mtx_);
       cache_->lookup(node, state->recvNodes[node]);
     }
     // create empty slot to avoid write conflict on callback

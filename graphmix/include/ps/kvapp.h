@@ -11,7 +11,13 @@
 namespace ps {
 
 // Use EmptyHandler if not server
-class EmptyHandler {};
+class EmptyHandler {
+public:
+  template<class A, class B>
+  void serve(A request, B response) {
+    LF << "Worker Error: Request should not be sent to worker. ";
+  }
+};
 
 template<class Handler>
 class KVApp {
@@ -59,22 +65,17 @@ private:
   template<PsfType ftype>
   void onReceive(const Message &msg) {
     if (msg.meta.request) {
-      if constexpr (std::is_same<Handler, EmptyHandler>()) {
-        LF << "Request should not be sent to this node. "
-          << Postoffice::Get()->van()->my_node().DebugString();
-      } else {
-        typename PSFData<ftype>::Request request;
-        typename PSFData<ftype>::Response response;
-        tupleDecode(request ,msg.data);
-        handler_->serve(request, response);
-        Message rmsg;
-        tupleEncode(response, rmsg.data);
-        rmsg.meta = msg.meta;
-        rmsg.meta.recver = msg.meta.sender;
-        rmsg.meta.request = false;
-        if (Postoffice::Get()->van()->IsReady())
-          Postoffice::Get()->van()->Send(rmsg);
-      }
+      typename PSFData<ftype>::Request request;
+      typename PSFData<ftype>::Response response;
+      tupleDecode(request ,msg.data);
+      handler_->serve(request, response);
+      Message rmsg;
+      tupleEncode(response, rmsg.data);
+      rmsg.meta = msg.meta;
+      rmsg.meta.recver = msg.meta.sender;
+      rmsg.meta.request = false;
+      if (Postoffice::Get()->van()->IsReady())
+        Postoffice::Get()->van()->Send(rmsg);
     } else {
       typename PSFData<ftype>::Response response;
       tupleDecode(response, msg.data);
@@ -91,11 +92,30 @@ private:
   // Recursively register receive message handler (from 0 to kNumPSfunction)
   template<PsfType ftype>
   void _init_message_handlers() {
+#if __cplusplus < 201703L
+    KVAppRegisterHelper<PsfType(0), KVApp<Handler>>::init(this);
+#else
     if constexpr (ftype != kNumPSfunction) {
       _message_handlers[ftype] = std::bind(&KVApp::template onReceive<ftype>, this, std::placeholders::_1);
       _init_message_handlers<PsfType(ftype+1)>();
     }
+#endif
   }
+#if __cplusplus < 201703L
+  // Recursively register receive message handler (from 0 to kNumPSfunction)
+  template<PsfType ftype, typename app>
+  struct KVAppRegisterHelper {
+    static void init(app* ptr) {
+      ptr->_message_handlers[ftype] = std::bind(&app::template onReceive<ftype>, ptr, std::placeholders::_1);
+      KVApp::KVAppRegisterHelper<PsfType(ftype+1), app>::init(ptr);
+    }
+  };
+  template<typename app>
+  struct KVAppRegisterHelper<kNumPSfunction, app> {
+    static void init(app* ptr) {}
+  };
+  template<PsfType, typename> friend struct KVAppRegisterHelper;
+#endif
   std::shared_ptr<Handler> handler_;
   std::shared_ptr<Customer> customer_;
   std::unique_ptr<graphmix::Client> cli_;

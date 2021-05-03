@@ -44,6 +44,6 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 target_sources(libc_graphmix PRIVATE ${PROTO_SRCS})
 target_include_directories(libc_graphmix PRIVATE ${CMAKE_CURRENT_BINARY_DIR})  # PROTO_HDRS files are here
 target_include_directories(libc_graphmix PRIVATE ${PROTOBUF_INCLUDE_DIR})
-target_include_directories(libc_graphmix PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(libc_graphmix PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(libc_graphmix PRIVATE ${PROTOBUF_LIBRARY})
 target_link_libraries(libc_graphmix PUBLIC ${METIS_LIBRARIES})

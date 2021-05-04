@@ -13,8 +13,6 @@ def test(args):
     comm = graphmix.Client(graphmix.default_server_port)
     query = comm.pull_graph()
     graph = comm.wait(query)
-    print(comm.meta)
-    print(graph)
     print("CHECK OK")
 
 def server_init(server):
@@ -26,7 +24,4 @@ if __name__ =='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="../config/stand_alone.yml")
     args = parser.parse_args()
-
-    proc = multiprocessing.Process(target=test, args=[args])
-    proc.start()
     graphmix.launcher(test, args, server_init=server_init)

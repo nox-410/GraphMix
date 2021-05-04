@@ -5,22 +5,9 @@ import numpy as np
 import scipy.sparse as sp
 import pickle
 import json
+from sklearn.preprocessing import StandardScaler
 
 from .utils import download_url, process_graph, extract_zip
-
-# class PlanetoidDataset():
-#     def __init__(self, root, name):
-#         from torch_geometric.datasets import Planetoid
-#         dataset = Planetoid(root=root, name=name, split="full")
-#         data = dataset[0]
-#         self.graph = _C.Graph(
-#             edge_index=data.edge_index.numpy(),
-#             num_nodes=data.num_nodes
-#         )
-#         self.x = data.x.numpy()
-#         self.y = data.y.numpy()
-#         self.train_mask = data.train_mask.numpy()
-#         self.num_classes = dataset.num_classes
 
 class PlanetoidDataset():
     def __init__(self, root, dataset_name, public_split=False):
@@ -62,20 +49,6 @@ class PlanetoidDataset():
             self.train_mask[sorted_test_index] = 2
         self.num_classes = y.shape[1]
 
-# class RedditDataset():
-#     def __init__(self, root):
-#         from torch_geometric.datasets import Reddit
-#         dataset = Reddit(root=root)
-#         data = dataset[0]
-#         self.graph = _C.Graph(
-#             edge_index=data.edge_index.numpy(),
-#             num_nodes=data.num_nodes
-#         )
-#         self.x = data.x.numpy()
-#         self.y = data.y.numpy()
-#         self.train_mask = data.train_mask.numpy()
-#         self.num_classes = dataset.num_classes
-
 class RedditDataset():
     def __init__(self, root):
         url = 'https://data.dgl.ai/dataset/reddit.zip'
@@ -108,8 +81,12 @@ class OGBDataset():
         split_idx = dataset.get_idx_split()
         data = dataset[0]
         num_nodes=data[1].shape[0]
+        edge = data[0]["edge_index"]
+        if name == "ogbn-arxiv":
+            #convert ogbn-arxiv to undirected graph
+            edge = np.concatenate([edge, edge[[1, 0]]], axis=1)
         self.graph = _C.Graph(
-            edge_index=data[0]["edge_index"],
+            edge_index=edge,
             num_nodes=num_nodes
         )
         split_idx = dataset.get_idx_split()
@@ -141,7 +118,6 @@ class GraphSaintDataset():
             role_id = '1nJIKd77lcAGU4j-kVNx_AIGEkveIKz3A'
 
         from google_drive_downloader import GoogleDriveDownloader as gdd
-        from sklearn.preprocessing import StandardScaler
 
         path = os.path.join(root, 'adj_full.npz')
         gdd.download_file_from_google_drive(adj_full_id, path)

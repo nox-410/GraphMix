@@ -28,4 +28,4 @@ ADD_TEST(NAME sampler COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_samplers.
     --config ${PROJECT_SOURCE_DIR}/config/test_config.yml)
 
 add_custom_target(graphmix_test_data COMMAND
-    python3 ${PROJECT_SOURCE_DIR}/python/utils/part_graph.py -d Cora -n 4 --nodeid -p ${PROJECT_SOURCE_DIR}/data)
+    python3 -m graphmix.partition -d Cora -n 4 --nodeid -p ${PROJECT_SOURCE_DIR}/data)

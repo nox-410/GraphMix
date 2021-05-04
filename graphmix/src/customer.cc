@@ -18,10 +18,13 @@ Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv
     Postoffice::Get()->AddCustomer(this);
     if (Postoffice::Get()->is_server()) {
       num_threads = GetEnv("GRAPHMIX_SERVER_RECV_THREAD", 10);
+      CHECK(num_threads >= 2) << "Graph Server Requires at leat 2 receive thread";
     }
   }
   for(int i = 0; i < num_threads; i++) {
-      recv_threads_.emplace_back(new std::thread(&Customer::Receiving, this));
+    // only allow half of the thread to handle blocking requests for graph
+    bool handle_graph = i & 1;
+    recv_threads_.emplace_back(new std::thread(&Customer::Receiving, this, handle_graph));
   }
 }
 
@@ -61,7 +64,7 @@ void Customer::WaitRequest(int timestamp) {
 //   tracker_[timestamp].second += num;
 // }
 
-void Customer::Receiving() {
+void Customer::Receiving(bool handle_graph) {
   while (true) {
     Message recv;
     // thread safe
@@ -70,6 +73,10 @@ void Customer::Receiving() {
         recv.meta.control.cmd == Control::TERMINATE) {
       recv_queue_.Push(recv);
       break;
+    }
+    if (!handle_graph && recv.meta.request && recv.meta.psftype == GraphPull) {
+      recv_queue_.Push(recv);
+      continue;
     }
     recv_handle_(recv);
     if (!recv.meta.request) {

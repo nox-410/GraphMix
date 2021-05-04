@@ -13,7 +13,7 @@
 #include <memory>
 #include <unordered_map>
 #include "ps/internal/message.h"
-#include "ps/internal/threadsafe_pqueue.h"
+#include "ps/internal/threadsafe_queue.h"
 namespace ps {
 
 /**
@@ -94,7 +94,7 @@ class Customer {
   /**
    * \brief the thread function
    */
-  void Receiving();
+  void Receiving(bool);
 
   int app_id_;
 
@@ -103,7 +103,7 @@ class Customer {
   bool stand_alone_;
 
   RecvHandle recv_handle_;
-  ThreadsafePQueue recv_queue_;
+  ThreadsafeQueue<Message> recv_queue_;
   //using multithread to speed data processing
   std::vector<std::shared_ptr<std::thread>> recv_threads_;
 

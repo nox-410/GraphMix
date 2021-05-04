@@ -4,6 +4,7 @@
 #ifndef PS_P3_VAN_H_
 #define PS_P3_VAN_H_
 #include <memory>
+#include "ps/internal/threadsafe_pqueue.h"
 namespace ps {
 
 /**
@@ -21,7 +22,7 @@ class P3Van : public ZMQVan {
       // start sender
       // set num_threads= 5 for debug
       int num_threads = 5;
-      for(int i =0;i < num_threads; i++) 
+      for(int i =0;i < num_threads; i++)
           sender_threads_.emplace_back(
                 new std::thread(&P3Van::Sending, this));
       //sender_thread_ = std::unique_ptr<std::thread>(

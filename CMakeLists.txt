@@ -26,6 +26,8 @@ ADD_TEST(NAME remote_sample COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_rem
     --config ${PROJECT_SOURCE_DIR}/config/test_config.yml)
 ADD_TEST(NAME sampler COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_samplers.py
     --config ${PROJECT_SOURCE_DIR}/config/test_config.yml)
+ADD_TEST(NAME burst COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_burst.py
+    --config ${PROJECT_SOURCE_DIR}/config/test_config.yml)
 
 add_custom_target(graphmix_test_data COMMAND
     python3 -m graphmix.partition -d Cora -n 4 --nodeid -p ${PROJECT_SOURCE_DIR}/data)

@@ -27,8 +27,10 @@ envvar = [
 
 default_server_port = 27777
 
-def start_server(shard, server_init):
+def start_server(shard, server_init, server_port=None):
     os.environ['GRAPHMIX_ROLE'] = "server"
+    if server_port:
+        os.environ["GRAPHMIX_SERVER_PORT"] = str(server_port)
     _C.init()
     shard.load_graph_shard(_C.rank())
     server = _C.start_server()
@@ -109,24 +111,22 @@ def launcher(target, args, server_init):
             proc = multiprocessing.Process(target=start_worker_standalone, args=[target, args, i])
         else:
             proc = multiprocessing.Process(target=start_worker, args=[target, args])
-        proc.start()
         process_list.append(proc)
 
     # launch servers
     for i in range(args.num_local_server):
         # if launch multiple server on one node, use different ports
-        os.environ["GRAPHMIX_SERVER_PORT"] = str(server_port + i)
-        proc = multiprocessing.Process(target=start_server, args=[shard, server_init])
-        proc.start()
+        proc = multiprocessing.Process(target=start_server, args=[shard, server_init, server_port + i])
         process_list.append(proc)
 
     # launch scheduler
     if settings["launch"]["scheduler"] != 0:
         proc = multiprocessing.Process(target=start_scheduler)
-        proc.start()
         process_list.append(proc)
 
     # wait until all process finish
+    for proc in process_list:
+        proc.start()
     signal.signal(signal.SIGINT, signal_handler)
     for proc in process_list:
         proc.join()

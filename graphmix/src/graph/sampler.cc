@@ -188,16 +188,23 @@ void GraphSageSampler::sample_once(sampleState state_base) {
   handle_->getRemote()->queryRemote(std::move(state));
 }
 
-void GraphSageSampler::try_build_index(size_t index) {
+void GraphSageSampler::try_build_index(ssize_t index) {
   if (!train_index.empty()) return;
-  CHECK(index >= 0 && index < handle_->iLen());
-  for (node_id i = handle_->offset(); i < handle_->offset() + handle_->nNodes(); i++) {
-    if (handle_->getNode(i)->i_feat[index] == 1) {
+  if (index < 0) {
+    train_index.reserve(handle_->nNodes());
+    for (node_id i = handle_->offset(); i < handle_->offset() + handle_->nNodes(); i++)
       train_index.push_back(i);
+  } else {
+    CHECK(index >= 0 && size_t(index) < handle_->iLen());
+    for (node_id i = handle_->offset(); i < handle_->offset() + handle_->nNodes(); i++) {
+      if (handle_->getNode(i)->i_feat[index] == 1) {
+        train_index.push_back(i);
+      }
     }
   }
   CHECK(train_index.size() >= batch_size_)
     << "GraphSage index build fails train_index < batch_size " << train_index.size() << "<" << batch_size_;
+  PS_VLOG(1) << "Create GraphSage Sampler at index " << index << " with train nodes " << train_index.size();
 }
 
 std::vector<node_id> GraphSageSampler::train_index;

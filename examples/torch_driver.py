@@ -130,7 +130,7 @@ def server_init(server):
     batch_size = args.batch_size
     label_rate = server.meta["train_node"] / server.meta["node"]
     server.init_cache(1, graphmix.cache.LFUOpt)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=5, thread=4, tag="G")
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=int(batch_size * label_rate), depth=2, width=5, thread=4, index=-1, tag="G")
     server.add_sampler(graphmix.sampler.RandomWalk, rw_head=int(batch_size/3), rw_length=2, thread=4, tag="R")
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=batch_size, thread=4, tag="L")
     server.is_ready()

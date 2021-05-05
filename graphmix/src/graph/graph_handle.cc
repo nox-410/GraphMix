@@ -203,8 +203,14 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
       CHECK(kvs.count("batch_size"));
       CHECK(kvs.count("depth"));
       CHECK(kvs.count("width"));
-      if (!kvs.count("index")) kvs["index"] = iLen() - 1;
-      sampler = std::make_unique<GraphSageSampler>(this, tag, kvs["batch_size"], kvs["depth"], kvs["width"], kvs["index"]);
+      if (!kvs.count("index")) kvs["index"] = -1;
+      else {
+        ssize_t len = iLen();
+        kvs["index"] = (kvs["index"] % len + len) % len;
+      }
+      sampler = std::make_unique<GraphSageSampler>(
+        this, tag, kvs["batch_size"], kvs["depth"], kvs["width"], kvs["index"]
+      );
       break;
     default:
       LF << "Sampler Not Implemented";

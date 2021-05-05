@@ -42,7 +42,7 @@ def server_init(server):
     server.add_sampler(graphmix.sampler.GlobalNode, batch_size=512)
     server.add_sampler(graphmix.sampler.LocalNode, batch_size=512)
     server.add_sampler(graphmix.sampler.RandomWalk, rw_head=256, rw_length=2)
-    server.add_sampler(graphmix.sampler.GraphSage, batch_size=16, depth=2, width=2)
+    server.add_sampler(graphmix.sampler.GraphSage, batch_size=16, depth=2, width=2, index=-1)
     server.is_ready()
 
 if __name__ =='__main__':

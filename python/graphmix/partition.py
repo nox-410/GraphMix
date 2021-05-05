@@ -20,14 +20,13 @@ def to_inductive(dataset):
     dataset.graph = graphmix.Graph(np.vstack([adj_mat.row, adj_mat.col]), len(indices))
     return dataset
 
-def part_graph(dataset_name, nparts, output_path,
+def part_graph(dataset, nparts, output_path,
     use_random_partition=False, inductive=False, include_nodeid=False):
     os.makedirs(os.path.expanduser(os.path.normpath(output_path)), exist_ok=True)
-    start = time.time()
-    dataset = graphmix.dataset.load_dataset(dataset_name)
+    dataset_name = dataset.name
     if inductive:
         dataset = to_inductive(dataset)
-    print("step1: load_dataset complete, time cost {:.3f}s".format(time.time()-start))
+    print("step1: load_dataset complete")
     start = time.time()
     partition = dataset.graph.part_graph(nparts, random=use_random_partition)
     print("step2: partition graph complete, time cost {:.3f}s".format(time.time()-start))
@@ -90,6 +89,6 @@ if __name__ =='__main__':
     args = parser.parse_args()
     output_path = str(args.path)
     nparts = int(args.nparts)
-    dataset = str(args.dataset)
-    output_path = os.path.join(output_path, dataset)
+    dataset = graphmix.dataset.load_dataset(args.dataset)
+    output_path = os.path.join(output_path, args.dataset)
     part_graph(dataset, nparts, output_path, args.random, args.inductive, args.nodeid)

@@ -73,7 +73,7 @@ public:
   SamplerType type() { return SamplerType::kLocalNode; }
 private:
   RandomIndexSelecter rd_;
-  size_t batch_size_;
+  const size_t batch_size_;
 };
 
 class GlobalNodeSampler : public BaseSampler {
@@ -84,7 +84,7 @@ public:
   SamplerType type() { return SamplerType::kGlobalNode; }
 private:
   RandomIndexSelecter rd_;
-  size_t batch_size_;
+  const size_t batch_size_;
 };
 
 class RandomWalkSampler : public BaseSampler {
@@ -95,8 +95,8 @@ public:
   SamplerType type() { return SamplerType::kRandomWalk; }
 private:
   RandomIndexSelecter rd_;
-  size_t rw_head_;
-  size_t rw_length_;
+  const size_t rw_head_;
+  const size_t rw_length_;
 };
 
 class GraphSageSampler : public BaseSampler {
@@ -109,8 +109,8 @@ public:
 private:
   GraphMiniBatch SageConstruct(sampleState);
   RandomIndexSelecter rd_;
-  size_t batch_size_;
-  size_t depth_, width_;
+  const size_t batch_size_;
+  const size_t depth_, width_;
   static std::vector<node_id> train_index;
   void try_build_index(size_t);
 };

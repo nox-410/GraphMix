@@ -95,7 +95,15 @@ GraphClient::pullGraph(py::args args) {
     auto &csr_j = std::get<3>(response);
     SamplerTag tag = std::get<5>(response);
     int type = std::get<6>(response);
-    size_t num_nodes = f_feat.size() / meta_.f_len;
+    // Get node number from the array length
+    size_t num_nodes;
+    if (f_feat.size() > 0) {
+      num_nodes = f_feat.size() / meta_.f_len;
+    } else if (i_feat.size() > 0) {
+      num_nodes = i_feat.size() / meta_.i_len;
+    } else {
+      CHECK(false) << "Currently, int feature and float feature must not both be zero";
+    }
     // coo-format is used only in graphsage minibatch
     std::string format = type == static_cast<int>(SamplerType::kGraphSage) ? "coo" : "csr";
     CHECK(tag != kInvalidTag) << "Empty reply, maybe an invalid sampler is used in client side";

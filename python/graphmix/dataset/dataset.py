@@ -11,9 +11,9 @@ from .utils import download_url, process_graph, extract_zip
 
 class PlanetoidDataset():
     def __init__(self, root, dataset_name, public_split=False):
+        assert dataset_name in ["Cora", "PubMed"]
+        self.name = dataset_name
         dataset_name = dataset_name.lower()
-        assert dataset_name in ["cora", "pubmed", "citeseer"]
-        super().__init__()
         # url = 'https://gitee.com/TMACzza/planetoid_datasets/raw/master'
         url = 'https://github.com/kimiyoung/planetoid/raw/master/data'
         names = ['x', 'tx', 'allx', 'y', 'ty', 'ally', 'graph', 'test.index']
@@ -51,6 +51,7 @@ class PlanetoidDataset():
 
 class RedditDataset():
     def __init__(self, root):
+        self.name = "Reddit"
         url = 'https://data.dgl.ai/dataset/reddit.zip'
         npz_file = os.path.join(root, 'reddit_data.npz')
         npz_graph_file = os.path.join(root, 'reddit_graph.npz')
@@ -76,6 +77,7 @@ class RedditDataset():
 
 class OGBDataset():
     def __init__(self, root, name):
+        self.name = name
         from ogb.nodeproppred import NodePropPredDataset
         dataset = NodePropPredDataset(name=name, root=root)
         split_idx = dataset.get_idx_split()
@@ -101,6 +103,7 @@ class OGBDataset():
 
 class GraphSaintDataset():
     def __init__(self, root, name):
+        self.name = name
         if name=="Yelp":
             adj_full_id = '1Juwx8HtDwSzmVIJ31ooVa1WljI4U5JnA'
             feats_id = '1Zy6BZH_zLEjKlEFSduKE5tV9qqA_8VtM'

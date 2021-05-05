@@ -127,10 +127,14 @@ void GraphHandle::initData(py::array_t<graph_float> f_feat, py::array_t<graph_in
   nodes_.resize(num_local_nodes_);
   for (node_id i = 0; i < num_local_nodes_; i++) {
     nodes_[i] = makeNodeData();
-    nodes_[i]->f_feat.resize(fLen());
-    nodes_[i]->i_feat.resize(iLen());
-    std::copy(f_feat.data(i, 0), f_feat.data(i, 0) + fLen(), nodes_[i]->f_feat.data());
-    std::copy(i_feat.data(i, 0), i_feat.data(i, 0) + iLen(), nodes_[i]->i_feat.data());
+    if (fLen()) {
+      nodes_[i]->f_feat.resize(fLen());
+      std::copy(f_feat.data(i, 0), f_feat.data(i, 0) + fLen(), nodes_[i]->f_feat.data());
+    }
+    if (iLen()) {
+      nodes_[i]->i_feat.resize(iLen());
+      std::copy(i_feat.data(i, 0), i_feat.data(i, 0) + iLen(), nodes_[i]->i_feat.data());
+    }
   }
   for (size_t i = 0; i < nedges; i++) {
     node_id u = edges.at(0, i), v = edges.at(1, i);

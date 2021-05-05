@@ -54,7 +54,7 @@ public:
   virtual SamplerType type() = 0;
   SamplerTag tag() { return tag_; }
 protected:
-  std::shared_ptr<GraphHandle> handle_;
+  const std::shared_ptr<GraphHandle> handle_;
   GraphMiniBatch construct(const NodePack &node_pack);
   virtual void sample_once(sampleState) = 0;
 private:

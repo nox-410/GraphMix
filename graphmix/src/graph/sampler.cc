@@ -27,7 +27,6 @@ void BaseSampler::sample_start() {
       CHECK(state->tag == tag());
       sample_once(std::move(state));
     }
-    handle_.reset();
   };
   thread_ = std::thread(func);
 }

@@ -3,7 +3,7 @@
 #include "graph/random.h"
 
 std::shared_ptr<PyGraph> makeGraph(py::array_t<node_id> edge_index, size_t num_nodes) {
-  assert(edge_index.ndim() == 2 && edge_index.shape(0) == 2);
+  CHECK(edge_index.ndim() == 2 && edge_index.shape(0) == 2);
   size_t num_edges = edge_index.shape(1);
   SArray<node_id> edge_index_u(num_edges), edge_index_v(num_edges);
   memcpy(edge_index_u.data(), edge_index.data(), num_edges * sizeof(node_id));
@@ -294,6 +294,24 @@ py::list PyGraph::part_graph(int nparts, bool balance_edge, bool random) {
   return result;
 }
 
+void PyGraph::setIntFeaturePython(py::array_t<graph_int> arr) {
+  CHECK(arr.ndim() == 2 && size_t(arr.shape(0)) == nNodes());
+  i_feat_.resize(arr.size());
+  std::copy(arr.data(), arr.data() + arr.size(), i_feat_.begin());
+}
+
+void PyGraph::setFloatFeaturePython(py::array_t<graph_float> arr) {
+  CHECK(arr.ndim() == 2 && size_t(arr.shape(0)) == nNodes());
+  f_feat_.resize(arr.size());
+  std::copy(arr.data(), arr.data() + arr.size(), f_feat_.begin());
+}
+
+void PyGraph::setExtraPython(py::array_t<graph_int> arr) {
+  CHECK(arr.ndim() == 2 && size_t(arr.shape(0)) == nNodes());
+  extra_.resize(arr.size());
+  std::copy(arr.data(), arr.data() + arr.size(), extra_.begin());
+}
+
 void PyGraph::initBinding(py::module &m) {
   py::class_<PyGraph, std::shared_ptr<PyGraph>>(m, "Graph", py::module_local(), py::module_local())
     .def(py::init(&makeGraph), py::arg("edge_index"), py::arg("num_nodes"))
@@ -301,11 +319,11 @@ void PyGraph::initBinding(py::module &m) {
     .def_property_readonly("num_nodes", &PyGraph::nNodes)
     .def_property_readonly("num_edges", &PyGraph::nEdges)
     .def_property_readonly("format", &PyGraph::getFormat)
-    .def_property_readonly("f_feat", &PyGraph::getFloatFeat)
-    .def_property_readonly("i_feat", &PyGraph::getIntFeat)
-    .def_property_readonly("type", &PyGraph::getType)
-    .def_property_readonly("tag", &PyGraph::getTag)
-    .def_property_readonly("extra", &PyGraph::getExtra)
+    .def_property("f_feat", &PyGraph::getFloatFeat, &PyGraph::setFloatFeaturePython)
+    .def_property("i_feat", &PyGraph::getIntFeat, &PyGraph::setIntFeaturePython)
+    .def_property("type", &PyGraph::getType, &PyGraph::setType)
+    .def_property("tag", &PyGraph::getTag, &PyGraph::setTag)
+    .def_property("extra", &PyGraph::getExtra, &PyGraph::setExtraPython)
     .def("part_graph", &PyGraph::part_graph, py::arg("nparts"), py::arg("balance_edge")=true, py::arg("random")=false)
     .def("partition", &PyGraph::PyPartition)
     .def("gcn_norm", &PyGraph::gcnNorm)

@@ -34,6 +34,9 @@ public:
   void setTag(SamplerTag tag) { tag_ = tag; }
   auto getTag() { return tag_; }
   void setExtra(SArray<graph_int> extra);
+  void setIntFeaturePython(py::array_t<graph_int>);
+  void setFloatFeaturePython(py::array_t<graph_float>);
+  void setExtraPython(py::array_t<graph_int>);
   py::array_t<graph_int> getExtra();
 
   //Graph common API

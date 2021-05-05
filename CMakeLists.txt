@@ -18,6 +18,7 @@ include(FetchContent) # download third_party
 add_subdirectory(${PROJECT_SOURCE_DIR}/graphmix)
 
 enable_testing()
+ADD_TEST(NAME graph COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_graph.py)
 ADD_TEST(NAME pullnode COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_pull_node.py
     --config ${PROJECT_SOURCE_DIR}/config/test_config.yml)
 ADD_TEST(NAME basic_sample COMMAND python3 ${PROJECT_SOURCE_DIR}/tests/test_base_sampling.py

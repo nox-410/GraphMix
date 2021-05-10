@@ -206,6 +206,4 @@ void GraphSageSampler::try_build_index(ssize_t index) {
   PS_VLOG(1) << "Create GraphSage Sampler at index " << index << " with train nodes " << train_index.size();
 }
 
-std::vector<node_id> GraphSageSampler::train_index;
-
 } // namespace ps

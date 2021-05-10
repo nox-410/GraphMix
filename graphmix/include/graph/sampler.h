@@ -112,7 +112,7 @@ private:
   RandomIndexSelecter rd_;
   const size_t batch_size_;
   const size_t depth_, width_;
-  static std::vector<node_id> train_index;
+  std::vector<node_id> train_index;
   void try_build_index(ssize_t index);
 };
 

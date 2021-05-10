@@ -91,8 +91,9 @@ def launcher(target, args, server_init):
 
     # the graph data path is relative to the setting file path
     raw_graph_data_path = settings["launch"]["data"]
-    graph_data_path = osp.relpath(osp.expanduser(osp.normpath(raw_graph_data_path)))
-    graph_data_path = osp.abspath(osp.join(osp.dirname(file_path), graph_data_path))
+    graph_data_path = osp.expanduser(osp.normpath(raw_graph_data_path))
+    if not osp.isabs(graph_data_path):
+        graph_data_path = osp.abspath(osp.join(osp.dirname(file_path), graph_data_path))
     print("GraphMix launcher : Using Graph Data from ", graph_data_path)
 
     # load graph and set the server number equal to the number of graph parts

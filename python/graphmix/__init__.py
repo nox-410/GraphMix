@@ -4,3 +4,5 @@ from libc_graphmix import Graph
 from . import dataset
 from .launcher import launcher, default_server_port
 from .client import Client
+
+__version__ = "0.1.0"

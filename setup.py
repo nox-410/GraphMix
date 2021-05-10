@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="graphmix",
-    version="0.0.1",
+    version="0.1.0",
     author="Yining Shi",
     author_email="shiyining@pku.edu.cn",
     description="GraphMix : scalable minibatch server for GNN training",

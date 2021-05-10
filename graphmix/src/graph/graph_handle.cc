@@ -183,6 +183,7 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
     LF << "Sampler tag should not be duplicated.";
   }
   int thread = kvs.count("thread") ? kvs["thread"] : 1;
+  int index; // for graphsage
   for (int i = 0; i < thread; i++) {
     switch (type)
     {
@@ -203,13 +204,13 @@ void GraphHandle::addSampler(SamplerType type, py::kwargs kwargs) {
       CHECK(kvs.count("batch_size"));
       CHECK(kvs.count("depth"));
       CHECK(kvs.count("width"));
-      if (!kvs.count("index")) kvs["index"] = -1;
-      else {
+      if (!kvs.count("subgraph")) kvs["subgraph"] = 0;
+      if (kvs.count("index")) {
         ssize_t len = iLen();
-        kvs["index"] = (kvs["index"] % len + len) % len;
-      }
+        index = (kvs["index"] % len + len) % len;
+      } else index = -1;
       sampler = std::make_unique<GraphSageSampler>(
-        this, tag, kvs["batch_size"], kvs["depth"], kvs["width"], kvs["index"]
+        this, tag, kvs["batch_size"], kvs["depth"], kvs["width"], index, bool(kvs["subgraph"])
       );
       break;
     default:

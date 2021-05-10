@@ -143,7 +143,9 @@ void GraphSageSampler::sample_once(sampleState state_base) {
   auto state = std::static_pointer_cast<_graphSageState>(state_base);
   if (state->expand_round == depth_) {
     // if ready
-    auto graph = SageConstruct(state);
+    GraphMiniBatch graph;
+    if (subgraph_) graph = construct(state->recvNodes);
+    else graph = SageConstruct(state);
     graph.extra.reserve(state->recvNodes.size());
     for (auto &node : state->recvNodes) {
       if (state->core_node.count(node.first)) {

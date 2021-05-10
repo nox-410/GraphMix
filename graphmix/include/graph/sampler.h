@@ -101,8 +101,9 @@ private:
 
 class GraphSageSampler : public BaseSampler {
 public:
-  GraphSageSampler(GraphHandle *handle, SamplerTag tag, size_t batch_size, size_t depth, size_t width, ssize_t train_mask_index)
-   : BaseSampler(handle, tag), batch_size_(batch_size), depth_(depth), width_(width) {
+  GraphSageSampler(GraphHandle *handle, SamplerTag tag, size_t batch_size, size_t depth, size_t width,
+    ssize_t train_mask_index, bool subgraph)
+   : BaseSampler(handle, tag), batch_size_(batch_size), depth_(depth), width_(width), subgraph_(subgraph) {
      try_build_index(train_mask_index);
     }
   void sample_once(sampleState);
@@ -112,6 +113,7 @@ private:
   RandomIndexSelecter rd_;
   const size_t batch_size_;
   const size_t depth_, width_;
+  const bool subgraph_;
   std::vector<node_id> train_index;
   void try_build_index(ssize_t index);
 };

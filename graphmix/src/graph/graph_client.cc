@@ -104,8 +104,10 @@ GraphClient::pullGraph(py::args args) {
     } else {
       CHECK(false) << "Currently, int feature and float feature must not both be zero";
     }
-    // coo-format is used only in graphsage minibatch
-    std::string format = type == static_cast<int>(SamplerType::kGraphSage) ? "coo" : "csr";
+    // choose the correct format
+    std::string format="coo";
+    if ((csr_i.size() == num_nodes + 1 && csr_i.back() == node_id(csr_j.size())) || csr_i.size() != csr_j.size())
+      format = "csr";
     CHECK(tag != kInvalidTag) << "Empty reply, maybe an invalid sampler is used in client side";
     auto graph = std::make_shared<PyGraph>(csr_i, csr_j, num_nodes, format);
     graph->setFeature(f_feat, i_feat);

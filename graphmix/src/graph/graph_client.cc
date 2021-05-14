@@ -174,24 +174,21 @@ void GraphClient::initMeta(py::dict meta) {
   meta_.offset.back() = meta_.num_nodes;
 }
 
-std::shared_ptr<GraphClient> createClient(int port) {
-  return std::make_shared<GraphClient>(port);
+std::unique_ptr<GraphClient> createClient(int port) {
+  static bool created = false;
+  if (port <= 0) {
+    if (!created) created = true;
+    else throw std::runtime_error("Create client twice in non-standalone mode.");
+  }
+  return std::make_unique<GraphClient>(port);
 }
 
 void GraphClient::initBinding(py::module& m) {
-  py::class_<GraphClient, std::shared_ptr<GraphClient>>(m, "graph client", py::module_local())
+  py::class_<GraphClient, std::unique_ptr<GraphClient>>(m, "graph client", py::module_local())
     .def_property_readonly("meta", &GraphClient::getMeta)
     .def("pull_node", &GraphClient::pullData)
     .def("pull_graph", &GraphClient::pullGraph)
     .def("wait", &GraphClient::waitData)
     .def("resolve", &GraphClient::resolveGraph);
-  m.def("get_client", GraphClient::Get);
   m.def("creat_client", createClient);
-}
-
-std::shared_ptr<GraphClient> GraphClient::Get() {
-  static std::shared_ptr<GraphClient> ptr;
-  static std::once_flag oc;
-  std::call_once(oc, []() { ptr = std::make_shared<GraphClient>(); });
-  return ptr;
 }

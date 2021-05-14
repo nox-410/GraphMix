@@ -9,7 +9,6 @@ using namespace ps;
 class GraphClient {
 public:
   GraphClient(int port = -1);
-  static std::shared_ptr<GraphClient> Get();
   // for data push&pull
   typedef uint64_t query_t;
   query_t pullData(py::array_t<node_id> indices, NodePack &nodes);

@@ -10,9 +10,13 @@ class _WaitObject():
         self.is_graph_query = is_graph_query
         self.pack = pack
 
+# We should only create one client object in non-standalone mode
+_global_comm = None
+
 # wrapper of the C++ class
 class Client():
     def __init__(self, port=None):
+        global _global_comm
         # detect whether in stand alone mode
         nw = "GRAPHMIX_NUM_WORKER"
         if nw not in os.environ or os.environ[nw] == '0':
@@ -25,7 +29,9 @@ class Client():
                                     try 'graphmix.default_server_port'")
             self.comm = _C.creat_client(port)
         else:
-            self.comm = _C.get_client()
+            if not _global_comm:
+                _global_comm = _C.creat_client(-1)
+            self.comm = _global_comm
 
     # Get the information dict of graph, which is the same as meta.yml file
     @property

@@ -131,3 +131,5 @@ def launcher(target, args, server_init):
     signal.signal(signal.SIGINT, signal_handler)
     for proc in process_list:
         proc.join()
+        if proc.exitcode < 0:
+            print("Error in sub process exit ", proc.exitcode)

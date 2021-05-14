@@ -24,11 +24,7 @@ PYBIND11_MODULE(libc_graphmix, m) {
       Postoffice::Get()->RegisterExitCallback([]() {
         StartServer()->getRemote().reset();
       });
-    } else if (Postoffice::Get()->is_worker()) {
-      Postoffice::Get()->RegisterExitCallback([]() {
-        GraphClient::Get()->getKVApp().reset();
-      });
-    }
+    } else if (Postoffice::Get()->is_worker());
     Postoffice::Get()->Finalize(0, true);
   });
 

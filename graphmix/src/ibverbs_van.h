@@ -1,8 +1,7 @@
 /**
- *  Copyright (c) 2018-2019 Bytedance Inc.
- *  Author: lanchang@bytedance.com (Chang Lan)
- *          jiangyimin@bytedance.com (Yimin Jiang)
- *          chenjingrong@bytedance.com (Jingrong Chen)
+ *  Copyright (c) 2015 by Contributors
+ * @file   network_utils.h
+ * @brief  network utilities
  */
 #ifndef PS_IBVERBS_VAN_H_
 #define PS_IBVERBS_VAN_H_
